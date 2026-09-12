@@ -1,0 +1,55 @@
+<div class="min-h-screen w-screen bg-brand-dark-950 flex flex-col justify-center items-center p-6 relative font-sans">
+  
+  <!-- Subtle Gradient Background Orbs for Premium Visual Parity -->
+  <div class="absolute w-[400px] h-[400px] rounded-full bg-brand-primary/10 blur-[120px] top-1/4 left-1/4 -z-10 animate-pulse"></div>
+  <div class="absolute w-[300px] h-[300px] rounded-full bg-brand-secondary/15 blur-[100px] bottom-1/4 right-1/4 -z-10"></div>
+
+  <!-- Central Glassmorphism Login Wrapper -->
+  <div class="w-full max-w-[420px] bg-brand-dark-900/70 border border-brand-dark-800 rounded-2xl p-8 shadow-2xl backdrop-blur-lg flex flex-col gap-6">
+    
+    <!-- Logo & Workspace Title -->
+    <div class="flex flex-col items-center gap-2 select-none">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center font-extrabold text-white text-xl shadow-lg shadow-brand-primary/20">
+        E
+      </div>
+      <h1 class="text-xl font-bold text-brand-text-100 tracking-tight mt-1">Empower Logics</h1>
+      <p class="text-xs text-brand-text-400 font-mono tracking-wider">Ticketing Workspace</p>
+    </div>
+
+    <!-- UNIFIED LOGIN VIEW -->
+    <div class="space-y-4 animate-fade-in">
+      <div class="space-y-1 text-center">
+        <h2 class="text-base font-bold text-brand-text-100">Sign In</h2>
+        <p class="text-xs text-brand-text-400">Enter your credentials to access your portal</p>
+      </div>
+
+      <form (ngSubmit)="onLogin()" class="space-y-4">
+        <div class="space-y-1.5">
+          <label class="text-[10px] font-bold text-brand-text-400 font-mono tracking-wider uppercase">User ID</label>
+          <input type="text" [(ngModel)]="credentials.userNumber" name="userNumber" required 
+                 placeholder="e.g. DEV-001, CUS-001, PM-001" 
+                 class="w-full px-3.5 py-2.5 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-xs text-brand-text-100 placeholder-brand-text-600 focus:outline-none focus:border-brand-primary transition">
+        </div>
+        
+        <div class="space-y-1.5">
+          <label class="text-[10px] font-bold text-brand-text-400 font-mono tracking-wider uppercase">Password</label>
+          <input type="password" [(ngModel)]="credentials.password" name="password" required 
+                 placeholder="••••••••" 
+                 class="w-full px-3.5 py-2.5 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-xs text-brand-text-100 placeholder-brand-text-600 focus:outline-none focus:border-brand-primary transition">
+        </div>
+
+        <button type="submit" 
+                class="w-full py-2.5 mt-2 bg-brand-primary hover:bg-brand-primary/95 text-white text-xs font-semibold rounded-lg shadow-md shadow-brand-primary/15 transition flex items-center justify-center gap-1.5 cursor-pointer">
+          Login Account
+          <span class="material-icons text-sm">arrow_forward</span>
+        </button>
+
+        <div *ngIf="errorMessage" class="p-3 mt-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs flex items-center gap-2">
+          <span class="material-icons text-sm">error</span>
+          {{ errorMessage }}
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>

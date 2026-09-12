@@ -1,0 +1,120 @@
+<div class="form-container">
+  <div class="form-header">
+    <h2>{{ pageTitle }}</h2>
+  </div>
+  
+  <div *ngIf="isLoading" class="loading-spinner">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <form [formGroup]="productForm" (ngSubmit)="save()" *ngIf="!isLoading" class="product-form">
+    <div class="form-section">
+      <div class="form-field">
+        <label for="productName" class="form-label">
+          Product Name <span class="required">*</span>
+        </label>
+        <input 
+          id="productName" 
+          formControlName="name" 
+          type="text" 
+          class="form-input"
+          placeholder="Enter product name"
+        >
+        <div *ngIf="productForm.get('name')?.invalid && productForm.get('name')?.touched" class="error-message">
+          Product name is required
+        </div>
+      </div>
+    </div>
+
+    <div class="modules-section" formArrayName="modules">
+      <div class="section-header">
+        <h3>Product Modules</h3>
+        <button type="button" class="add-btn primary" (click)="addModule()">
+          <span class="btn-icon">+</span>
+          Add Module
+        </button>
+      </div>
+
+      <div class="modules-list">
+        <div *ngFor="let module of modules().controls; let i = index" [formGroupName]="i" class="module-card">
+          <div class="module-header">
+            <div class="module-number">{{ i + 1 }}</div>
+            <div class="module-content">
+              <div class="form-field">
+                <label for="module-{{i}}" class="form-label">
+                  Module Name <span class="required">*</span>
+                </label>
+                <div class="input-group">
+                  <input 
+                    id="module-{{i}}" 
+                    formControlName="name" 
+                    type="text" 
+                    class="form-input"
+                    placeholder="Enter module name"
+                  >
+                  <button type="button" class="remove-btn danger" (click)="removeModule(i)">
+                    <span class="btn-icon">×</span>
+                  </button>
+                </div>
+                <div *ngIf="module.get('name')?.invalid && module.get('name')?.touched" class="error-message">
+                  Module name is required
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="submodule-section" formArrayName="subModules">
+            <div class="submodule-header">
+              <label class="section-label">Sub-Modules</label>
+              <button type="button" class="add-btn secondary small" (click)="addSubModule(i)">
+                <span class="btn-icon">+</span>
+                Add Sub-Module
+              </button>
+            </div>
+            
+            <div class="submodules-grid" *ngIf="subModules(i).controls.length > 0">
+              <div *ngFor="let subModule of subModules(i).controls; let j = index" [formGroupName]="j" class="submodule-item">
+                <div class="submodule-input-group">
+                  <input 
+                    formControlName="name" 
+                    type="text" 
+                    class="form-input small"
+                    placeholder="Sub-module name"
+                  >
+                  <button type="button" class="remove-btn-small danger" (click)="removeSubModule(i, j)">
+                    <span class="btn-icon">×</span>
+                  </button>
+                </div>
+                <div *ngIf="subModule.get('name')?.invalid && subModule.get('name')?.touched" class="error-message small">
+                  Sub-module name is required
+                </div>
+              </div>
+            </div>
+            
+            <div *ngIf="subModules(i).controls.length === 0" class="empty-state">
+              <p>No sub-modules added yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="modules().controls.length === 0" class="empty-state large">
+        <div class="empty-icon">📦</div>
+        <h4>No modules added yet</h4>
+        <p>Add your first module to get started</p>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn secondary" (click)="cancel()">
+        Cancel
+      </button>
+      <button type="submit" class="btn primary" [disabled]="productForm.invalid">
+        <span class="btn-icon" *ngIf="isEditMode">💾</span>
+        <span class="btn-icon" *ngIf="!isEditMode">➕</span>
+        {{ isEditMode ? 'Update Product' : 'Save Product' }}
+      </button>
+    </div>
+  </form>
+</div>

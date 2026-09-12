@@ -1,0 +1,547 @@
+<div class="space-y-6">
+  
+  <!-- PM Dashboard Header -->
+  <div class="flex items-center justify-between gap-4 w-full flex-wrap">
+    <div>
+      <h1 class="text-2xl font-bold text-brand-text-100 tracking-tight">Issues Desk</h1>
+      <p class="text-xs text-brand-text-400 font-mono mt-0.5">Track, prioritize, and manage support tickets</p>
+    </div>
+    
+    <div class="flex items-center gap-2 flex-wrap">
+      <!-- Toggle Board/List View -->
+      <div class="flex items-center p-0.5 bg-brand-dark-950 border border-brand-dark-800 rounded-lg w-fit select-none">
+        <button (click)="setViewMode('board')" 
+                class="px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                [class.bg-brand-dark-900]="viewMode === 'board'"
+                [class.text-brand-text-100]="viewMode === 'board'"
+                [class.text-brand-text-400]="viewMode !== 'board'">
+          <span class="material-icons text-xs">dashboard</span>
+          Board
+        </button>
+        <button (click)="setViewMode('list')" 
+                class="px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                [class.bg-brand-dark-900]="viewMode === 'list'"
+                [class.text-brand-text-100]="viewMode === 'list'"
+                [class.text-brand-text-400]="viewMode !== 'list'">
+          <span class="material-icons text-xs">view_list</span>
+          List
+        </button>
+      </div>
+
+      <!-- Scope Dropdown (All, My, Juniors) -->
+      <select [ngModel]="pmTicketFilter" (ngModelChange)="setTicketOwnershipFilter($event)"
+              class="bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-xs font-semibold text-brand-text-100 py-1 px-2.5 focus:outline-none focus:border-brand-primary cursor-pointer select-none h-[28px] md:h-[30px]">
+        <option value="all">All Issues</option>
+        <option value="mine">My Issues</option>
+        <option value="juniors">Juniors' Issues</option>
+      </select>
+
+      <!-- Filters toggle button -->
+      <button (click)="toggleFilterSection()" 
+              class="px-2.5 py-1 bg-brand-dark-950 border border-brand-dark-800 hover:bg-brand-dark-700 text-xs font-semibold rounded-lg flex items-center gap-1 transition cursor-pointer select-none h-[28px] md:h-[30px]"
+              [class.border-brand-primary]="showFilterSection || getActiveFiltersCount() > 0"
+              [class.text-brand-primary]="showFilterSection || getActiveFiltersCount() > 0"
+              [class.text-brand-text-100]="showFilterSection"
+              [class.text-brand-text-400]="!showFilterSection && getActiveFiltersCount() === 0">
+        <span class="material-icons text-xs">{{ showFilterSection ? 'filter_list_off' : 'filter_list' }}</span>
+        Filters
+        <span *ngIf="getActiveFiltersCount() > 0" class="px-1.5 py-0.2 text-[9px] bg-brand-primary text-white rounded-full font-bold leading-none">
+          {{ getActiveFiltersCount() }}
+        </span>
+      </button>
+
+      <!-- Refresh / Sync Workspace Button -->
+      <button (click)="refreshDashboard()" [disabled]="isLoading" 
+              title="Sync Workspace"
+              class="px-2.5 py-1 bg-brand-dark-950 border border-brand-dark-800 hover:bg-brand-dark-700 text-xs font-semibold rounded-lg flex items-center gap-1 transition cursor-pointer select-none h-[28px] md:h-[30px]">
+        <span class="material-icons text-xs" [class.animate-spin]="isLoading">refresh</span>
+        Sync
+      </button>
+
+      <!-- Clear Filters Header Shortcut -->
+      <button *ngIf="selectedStatus || selectedPriority || selectedAssignee !== null || selectedCustomer !== null || activeStatFilter"
+              (click)="clearAllFilters()"
+              class="px-2 py-1 bg-brand-primary/10 border border-brand-primary/20 text-brand-primary rounded-lg flex items-center gap-1 hover:bg-brand-primary hover:text-white transition duration-150 cursor-pointer select-none text-[10px] font-semibold h-[28px] md:h-[30px]">
+        <span class="material-icons text-[10px]">close</span>
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <!-- Sleek Borderless Stats Widgets (Compact like Standard) -->
+  <section class="grid grid-cols-4 gap-3" *ngIf="displayStats">
+    <!-- Stat Card Pending -->
+    <div (click)="onStatCardClick('pending')" 
+         class="py-2 px-3.5 rounded-lg cursor-pointer border transition duration-150 relative overflow-hidden group select-none flex items-center justify-between gap-2"
+         [class.bg-brand-dark-900]="activeStatFilter !== 'pending'"
+         [class.border-brand-dark-800]="activeStatFilter !== 'pending'"
+         [class.bg-brand-primary/10]="activeStatFilter === 'pending'"
+         [class.border-brand-primary]="activeStatFilter === 'pending'">
+      <div class="flex flex-col">
+        <div class="text-xl font-bold text-brand-text-100 leading-none">{{ displayStats.totalPending }}</div>
+        <div class="text-[10px] text-brand-text-400 font-semibold tracking-wider font-mono uppercase mt-0.5">Pending</div>
+      </div>
+      <div class="text-xl opacity-25 group-hover:scale-110 transition duration-150">📊</div>
+    </div>
+    
+    <!-- Stat Card Urgent -->
+    <div (click)="onStatCardClick('urgent')" 
+         class="py-2 px-3.5 rounded-lg cursor-pointer border transition duration-150 relative overflow-hidden group select-none flex items-center justify-between gap-2"
+         [class.bg-brand-dark-900]="activeStatFilter !== 'urgent'"
+         [class.border-brand-dark-800]="activeStatFilter !== 'urgent'"
+         [class.bg-red-500/10]="activeStatFilter === 'urgent'"
+         [class.border-red-500/30]="activeStatFilter === 'urgent'">
+      <div class="flex flex-col">
+        <div class="text-xl font-bold text-red-400 leading-none">{{ displayStats.urgentTickets }}</div>
+        <div class="text-[10px] text-red-400/80 font-semibold tracking-wider font-mono uppercase mt-0.5">Urgent</div>
+      </div>
+      <div class="text-xl opacity-25 group-hover:scale-110 transition duration-150">🚨</div>
+    </div>
+
+    <!-- Stat Card Delayed -->
+    <div (click)="onStatCardClick('delayed')" 
+         class="py-2 px-3.5 rounded-lg cursor-pointer border transition duration-150 relative overflow-hidden group select-none flex items-center justify-between gap-2"
+         [class.bg-brand-dark-900]="activeStatFilter !== 'delayed'"
+         [class.border-brand-dark-800]="activeStatFilter !== 'delayed'"
+         [class.bg-amber-500/10]="activeStatFilter === 'delayed'"
+         [class.border-amber-500/30]="activeStatFilter === 'delayed'">
+      <div class="flex flex-col">
+        <div class="text-xl font-bold text-amber-400 leading-none">{{ displayStats.delayedTickets }}</div>
+        <div class="text-[10px] text-amber-400/80 font-semibold tracking-wider font-mono uppercase mt-0.5">Delayed</div>
+      </div>
+      <div class="text-xl opacity-25 group-hover:scale-110 transition duration-150">⏳</div>
+    </div>
+
+    <!-- Stat Card New -->
+    <div (click)="onStatCardClick('new')" 
+         class="py-2 px-3.5 rounded-lg cursor-pointer border transition duration-150 relative overflow-hidden group select-none flex items-center justify-between gap-2"
+         [class.bg-brand-dark-900]="activeStatFilter !== 'new'"
+         [class.border-brand-dark-800]="activeStatFilter !== 'new'"
+         [class.bg-emerald-500/10]="activeStatFilter === 'new'"
+         [class.border-emerald-500/30]="activeStatFilter === 'new'">
+      <div class="flex flex-col">
+        <div class="text-xl font-bold text-emerald-400 leading-none">{{ displayStats.newToday }}</div>
+        <div class="text-[10px] text-emerald-400/80 font-semibold tracking-wider font-mono uppercase mt-0.5">New Today</div>
+      </div>
+      <div class="text-xl opacity-25 group-hover:scale-110 transition duration-150">✨</div>
+    </div>
+  </section>
+
+  <!-- Collapsible Filters Section (0 height when closed!) -->
+  <section *ngIf="showFilterSection" class="p-2 bg-brand-dark-900 border border-brand-dark-800 rounded-xl space-y-2">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-bold text-brand-text-400 font-mono tracking-widest uppercase">Status</label>
+        <select [(ngModel)]="selectedStatus" (change)="onFilterChange()" 
+                class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded-md text-xs text-brand-text-100 p-2 focus:outline-none focus:border-brand-primary transition">
+          <option [ngValue]="null">All Statuses</option>
+          <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+        </select>
+      </div>
+      
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-bold text-brand-text-400 font-mono tracking-widest uppercase">Priority</label>
+        <select [(ngModel)]="selectedPriority" (change)="onFilterChange()" 
+                class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded-md text-xs text-brand-text-100 p-2 focus:outline-none focus:border-brand-primary transition">
+          <option [ngValue]="null">All Priorities</option>
+          <option *ngFor="let priority of priorityOptions" [value]="priority">{{ priority }}</option>
+        </select>
+      </div>
+      
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-bold text-brand-text-400 font-mono tracking-widest uppercase">Developer</label>
+        <select [(ngModel)]="selectedAssignee" (ngModelChange)="onFilterChange()" 
+                class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded-md text-xs text-brand-text-100 p-2 focus:outline-none focus:border-brand-primary transition">
+          <option [ngValue]="null">All Developers</option>
+          <option *ngFor="let assignee of assigneeOptions" [ngValue]="assignee.assigneeNumber">
+            {{ assignee.name }} ({{ assignee.assigneeNumber }})
+          </option>
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-bold text-brand-text-400 font-mono tracking-widest uppercase">Customer</label>
+        <select [(ngModel)]="selectedCustomer" (change)="onFilterChange()" 
+                class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded-md text-xs text-brand-text-100 p-2 focus:outline-none focus:border-brand-primary transition">
+          <option [ngValue]="null">All Customers</option>
+          <option *ngFor="let customer of allCustomers" [value]="customer.id">
+            {{ customer.fullName }} ({{ customer.userNumber }})
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Active filters display strip -->
+    <div class="flex items-center justify-between border-t border-brand-dark-800/40 pt-2 text-xs text-brand-text-400 font-mono">
+      <span>Active Filters: {{ getFilterSummary() }}</span>
+      <button *ngIf="selectedStatus || selectedPriority || selectedAssignee !== null || selectedCustomer !== null || activeStatFilter"
+              (click)="clearAllFilters()"
+              class="px-2.5 py-1 text-[10px] font-semibold bg-brand-primary/10 border border-brand-primary/20 text-brand-primary rounded-md flex items-center gap-1 hover:bg-brand-primary hover:text-white transition duration-150 cursor-pointer select-none">
+        <span class="material-icons text-[10px]">close</span>
+        Clear All
+      </button>
+    </div>
+  </section>
+
+  <!-- LOADING INDICATOR -->
+  <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-20 gap-3">
+    <div class="w-8 h-8 rounded-full border-2 border-brand-primary/20 border-t-brand-primary animate-spin"></div>
+    <span class="text-xs text-brand-text-400 font-mono">Syncing workspace...</span>
+  </div>
+
+  <!-- KANBAN BOARD VIEW -->
+  <div class="flex gap-4 overflow-x-auto pb-4 select-none min-h-[500px]" *ngIf="viewMode === 'board' && !isLoading">
+    <div class="flex flex-col w-[290px] shrink-0 bg-brand-dark-900 border border-brand-dark-800 rounded-xl p-3 h-[600px]" 
+         *ngFor="let colStatus of getOrderedStatusOptions()">
+      
+      <!-- Lane Header -->
+      <div class="flex items-center justify-between mb-3 px-1">
+        <div class="flex items-center gap-2 overflow-hidden">
+          <span class="w-2.5 h-2.5 rounded-full shrink-0" [ngClass]="getStatusDotClass(colStatus)"></span>
+          <span class="text-[10px] font-bold text-brand-text-100 uppercase tracking-widest truncate">{{ colStatus }}</span>
+        </div>
+        <span class="text-[10px] text-brand-text-400 font-mono px-2 py-0.5 bg-brand-dark-950 border border-brand-dark-800 rounded">
+          {{ getTicketsByStatus(colStatus).length }}
+        </span>
+      </div>
+
+      <!-- Scrollable Cards Body -->
+      <div class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+        <div *ngFor="let ticket of getTicketsByStatus(colStatus)"
+             (click)="onTicketClick(ticket)"
+             class="p-2.5 bg-brand-dark-950 border border-brand-dark-800 hover:border-brand-primary/60 rounded-lg cursor-pointer transition duration-150 space-y-2 group">
+          
+          <!-- Number and Priority badge -->
+          <div class="flex items-center justify-between text-[10px] text-brand-text-400 font-mono">
+            <span class="group-hover:text-brand-primary transition duration-150">{{ ticket.ticketNumber }}</span>
+            <span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase" 
+                  [ngClass]="getPriorityClass(ticket.priority)">
+              {{ ticket.priority }}
+            </span>
+          </div>
+
+          <!-- Subject -->
+          <h4 class="text-[11px] font-semibold text-brand-text-100 leading-snug line-clamp-2 group-hover:text-white transition duration-150">
+            {{ ticket.subject }}
+          </h4>
+
+          <!-- Description snippet -->
+          <p *ngIf="ticket.description" class="text-[9px] text-brand-text-500 font-mono leading-relaxed line-clamp-1">
+            {{ ticket.description | slice:0:50 }}{{ ticket.description.length > 50 ? '…' : '' }}
+          </p>
+
+          <!-- Customer Name & Elapsed Time -->
+          <div class="flex items-center justify-between text-[9.5px] text-brand-text-400 font-mono pt-1">
+            <span class="truncate max-w-[130px] text-brand-text-300 font-medium" [title]="'Customer: ' + ticket.customerName">🏢 {{ ticket.customerName }}</span>
+            <span [ngClass]="getTicketAgeClass(ticket.createdOn, ticket.status, ticket.updatedOn)">
+              {{ getTimeElapsed(ticket.createdOn) }}
+            </span>
+          </div>
+
+          <!-- Bottom Row: Created By (Left) vs Assigned To (Right) -->
+          <div class="flex items-center justify-between pt-1.5 border-t border-brand-dark-800/60 text-[9.5px] font-mono gap-1">
+            <!-- Left Side: Created By -->
+            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-900/70 border border-purple-500/50 text-white font-bold min-w-0 max-w-[48%]" [title]="'Created by: ' + (ticket.createdByName || '—')">
+              <span class="w-1.5 h-1.5 rounded-full bg-purple-300 shrink-0"></span>
+              <span class="text-purple-300 font-extrabold uppercase shrink-0">By:</span>
+              <span class="text-white font-extrabold truncate">
+                {{ ticket.createdByName || '—' }}
+              </span>
+            </div>
+
+            <!-- Right Side: Assigned To -->
+            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-900/70 border border-blue-500/50 text-white font-bold min-w-0 max-w-[48%] justify-end text-right" [title]="'Assigned to: ' + (ticket.assignedToName || ticket.assignedTo || 'Unassigned')">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-300 shrink-0"></span>
+              <span class="text-blue-300 font-extrabold uppercase shrink-0">To:</span>
+              <span class="text-white font-extrabold truncate">
+                {{ ticket.assignedToName || ticket.assignedTo || 'Unassigned' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lane Empty State -->
+        <div *ngIf="getTicketsByStatus(colStatus).length === 0" 
+             class="flex flex-col items-center justify-center py-20 text-center border border-dashed border-brand-dark-800 rounded-lg">
+          <span class="text-2xl opacity-10">📥</span>
+          <span class="text-[10px] text-brand-text-400 font-mono mt-1">Empty lane</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLAT LIST VIEW -->
+  <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl overflow-hidden shadow-sm" *ngIf="viewMode === 'list' && !isLoading">
+    
+    <!-- Table Grid Header -->
+    <div class="grid grid-cols-12 gap-3 px-5 py-3 border-b border-brand-dark-800 text-[10px] font-bold text-brand-text-400 font-mono uppercase tracking-widest select-none">
+      <div class="col-span-2 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('id')">ID</div>
+      <div class="col-span-2 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('subject')">Subject</div>
+      <div class="col-span-1 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('customerName')">Customer</div>
+      <div class="col-span-2 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('createdByName')">Created By</div>
+      <div class="col-span-2 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('assignedToName')">Assigned</div>
+      <div class="col-span-1 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('status')">Status</div>
+      <div class="col-span-1 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('priority')">Priority</div>
+      <div class="col-span-1 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('createdOn')">Date</div>
+    </div>
+
+    <!-- Table Grid Body -->
+    <div class="divide-y divide-brand-dark-800">
+      <div *ngFor="let ticket of paginatedTickets" 
+           (click)="onTicketClick(ticket)"
+           class="grid grid-cols-12 gap-3 px-5 py-3 hover:bg-brand-dark-700/30 cursor-pointer transition items-center text-xs text-brand-text-300">
+        
+        <div class="col-span-2 font-mono font-medium text-brand-primary text-[10px]"
+             [ngClass]="getTicketAgeClass(ticket.createdOn, ticket.status, ticket.updatedOn)">
+          {{ ticket.ticketNumber }}
+        </div>
+        <!-- Subject -->
+        <div class="col-span-2 font-semibold text-brand-text-100 text-[11px] truncate pr-1" [title]="ticket.subject">
+          {{ ticket.subject }}
+        </div>
+        <!-- Customer -->
+        <div class="col-span-1 text-[10px] text-brand-text-400 font-mono truncate" [title]="ticket.customerName">
+          {{ ticket.customerName || '—' }}
+        </div>
+        <!-- Created By -->
+        <div class="col-span-2 text-[10.5px] text-purple-300 font-mono font-bold truncate" [title]="ticket.createdByName">
+          {{ ticket.createdByName || '—' }}
+        </div>
+        <!-- Assignee -->
+        <div class="col-span-2 flex items-center gap-1.5 min-w-0">
+          <div *ngIf="ticket.assignedToName || ticket.assignedTo"
+               class="shrink-0 w-5 h-5 rounded-full bg-blue-500/30 text-blue-300 flex items-center justify-center font-extrabold text-[9px] border border-blue-500/40"
+               [title]="ticket.assignedToName || ticket.assignedTo">
+            {{ getAssigneeInitials(ticket) }}
+          </div>
+          <span class="truncate text-[10.5px] text-blue-300 font-bold" [title]="ticket.assignedToName || ticket.assignedTo">
+            {{ ticket.assignedToName || ticket.assignedTo || 'Unassigned' }}
+          </span>
+        </div>
+        <!-- Status -->
+        <div class="col-span-1 flex">
+          <span class="px-1.5 py-0.5 text-[9px] font-semibold rounded-md whitespace-nowrap" [ngClass]="getStatusClass(ticket.status)">
+            {{ ticket.status }}
+          </span>
+        </div>
+        <!-- Priority -->
+        <div class="col-span-1 flex">
+          <span class="px-1.5 py-0.5 text-[9px] font-semibold rounded-md uppercase" [ngClass]="getPriorityClass(ticket.priority)">
+            {{ ticket.priority }}
+          </span>
+        </div>
+        <!-- Date -->
+        <div class="col-span-1 font-mono text-[10px] text-brand-text-400">
+          {{ formatDate(ticket.createdOn) }}
+        </div>
+      </div>
+
+      <!-- Grid Empty State -->
+      <div *ngIf="paginatedTickets.length === 0" class="flex flex-col items-center justify-center py-20 text-center">
+        <span class="text-3xl opacity-20">📋</span>
+        <p class="text-sm font-semibold text-brand-text-100 mt-2">No tickets found</p>
+        <p class="text-xs text-brand-text-400 font-mono mt-1">Try adjusting or clearing your filters</p>
+      </div>
+    </div>
+
+    <!-- Grid Pagination Footer -->
+    <div class="px-5 py-4 border-t border-brand-dark-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-brand-text-400 font-mono select-none select-none">
+      <div>
+        Showing {{ getStartRecord() }} - {{ getEndRecord() }} of {{ totalRecords }} records
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <!-- Page size -->
+        <div class="flex items-center gap-2">
+          <span>Show:</span>
+          <select [(ngModel)]="pageSize" (change)="onPageSizeChange()" 
+                  class="bg-brand-dark-950 border border-brand-dark-800 rounded px-1.5 py-0.5 text-brand-text-100 focus:outline-none">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+          </select>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex items-center gap-1">
+          <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)"
+                  class="px-2.5 py-1 bg-brand-dark-950 border border-brand-dark-800 rounded hover:bg-brand-dark-700 disabled:opacity-40 transition cursor-pointer">
+            ‹
+          </button>
+          
+          <button *ngFor="let page of getPageNumbers()" 
+                  [class.bg-brand-primary]="page === currentPage"
+                  [class.text-white]="page === currentPage"
+                  [class.border-brand-primary]="page === currentPage"
+                  (click)="onPageChange(page)"
+                  class="px-2.5 py-1 bg-brand-dark-950 border border-brand-dark-800 rounded hover:bg-brand-dark-700 transition cursor-pointer">
+            {{ page }}
+          </button>
+          
+          <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)"
+                  class="px-2.5 py-1 bg-brand-dark-950 border border-brand-dark-800 rounded hover:bg-brand-dark-700 disabled:opacity-40 transition cursor-pointer">
+            ›
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SELECT CUSTOMER MODAL DRAWER -->
+  <div class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-end z-50 transition-opacity duration-200" 
+       *ngIf="showCustomerSelect" 
+       (click)="closeCustomerSelect()">
+    
+    <div class="w-full max-w-md h-full bg-brand-dark-900 border-l border-brand-dark-800 p-6 flex flex-col gap-6 animate-slide-in shadow-2xl" 
+         (click)="$event.stopPropagation()">
+      
+      <!-- Drawer Header -->
+      <div class="flex items-center justify-between border-b border-brand-dark-800 pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-brand-text-100">Create New Ticket</h2>
+          <p class="text-xs text-brand-text-400 font-mono mt-0.5">Step 1: Select customer account</p>
+        </div>
+        <button (click)="closeCustomerSelect()" class="p-1 rounded-md text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition">
+          <span class="material-icons text-lg">close</span>
+        </button>
+      </div>
+
+      <!-- Two Tabs: MY CUSTOMERS vs ALL CUSTOMERS -->
+      <div class="flex items-center gap-1 bg-brand-dark-950 p-1 rounded-lg border border-brand-dark-800">
+        <button type="button" 
+                (click)="switchCustomerTab('my')"
+                [class.bg-brand-primary]="activeCustomerTab === 'my'"
+                [class.text-white]="activeCustomerTab === 'my'"
+                [class.text-brand-text-400]="activeCustomerTab !== 'my'"
+                class="flex-1 py-1.5 text-xs font-semibold rounded-md transition flex items-center justify-center gap-1.5">
+          <span class="material-icons text-[14px]">person</span>
+          My Customers
+          <span class="px-1.5 py-0.2 text-[10px] rounded-full bg-brand-dark-800 text-brand-text-200" [class.bg-white/20]="activeCustomerTab === 'my'" [class.text-white]="activeCustomerTab === 'my'">
+            {{ myCustomers.length }}
+          </span>
+        </button>
+        <button type="button" 
+                (click)="switchCustomerTab('all')"
+                [class.bg-brand-primary]="activeCustomerTab === 'all'"
+                [class.text-white]="activeCustomerTab === 'all'"
+                [class.text-brand-text-400]="activeCustomerTab !== 'all'"
+                class="flex-1 py-1.5 text-xs font-semibold rounded-md transition flex items-center justify-center gap-1.5">
+          <span class="material-icons text-[14px]">groups</span>
+          All Customers
+          <span class="px-1.5 py-0.2 text-[10px] rounded-full bg-brand-dark-800 text-brand-text-200" [class.bg-white/20]="activeCustomerTab === 'all'" [class.text-white]="activeCustomerTab === 'all'">
+            {{ allCustomers.length }}
+          </span>
+        </button>
+      </div>
+
+      <!-- Quick search input -->
+      <div class="relative">
+        <span class="material-icons text-brand-text-400 text-sm absolute left-3 top-1/2 -translate-y-1/2">search</span>
+        <input type="text" placeholder="Search by customer name or number..." 
+               [(ngModel)]="customerSearchTerm" (input)="filterCustomers()"
+               class="w-full pl-9 pr-4 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-xs text-brand-text-100 placeholder-brand-text-400 focus:outline-none focus:border-brand-primary transition">
+      </div>
+
+      <!-- Customer list -->
+      <div class="flex-1 overflow-y-auto min-h-0 pr-1">
+        <div *ngIf="customerListIsLoading" class="flex flex-col items-center justify-center py-20 gap-2">
+          <div class="w-6 h-6 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin"></div>
+          <span class="text-xs text-brand-text-400 font-mono">Loading lists...</span>
+        </div>
+
+        <div *ngIf="filteredCustomers.length === 0 && !customerListIsLoading" class="flex flex-col items-center justify-center py-20 text-center">
+          <span class="text-2xl opacity-20">👤</span>
+          <p class="text-xs text-brand-text-400 font-mono mt-1">No customers found</p>
+        </div>
+
+        <ul class="space-y-1.5" *ngIf="!customerListIsLoading">
+          <li *ngFor="let customer of filteredCustomers" 
+              (click)="selectCustomer(customer)"
+              class="flex items-center justify-between p-3.5 bg-brand-dark-950 border border-brand-dark-800 hover:border-brand-primary/40 hover:bg-brand-dark-700/10 rounded-lg cursor-pointer transition duration-150 group">
+            
+            <div class="flex items-center gap-3 overflow-hidden">
+              <div class="w-8 h-8 rounded-full bg-brand-secondary/10 flex items-center justify-center font-bold text-brand-secondary text-sm shrink-0">
+                👤
+              </div>
+              <div class="flex flex-col overflow-hidden min-w-0">
+                <span class="text-xs font-semibold text-brand-text-100 truncate">{{ customer.fullName }}</span>
+                <span class="text-[10px] text-brand-text-400 font-mono mt-0.5 truncate">Customer #: {{ customer.userNumber }}</span>
+              </div>
+            </div>
+            
+            <span class="material-icons text-brand-text-400 text-sm group-hover:text-brand-primary group-hover:translate-x-0.5 transition duration-150">
+              arrow_forward_ios
+            </span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Multi-Match Global Search Results Modal -->
+<div *ngIf="showGlobalSearchModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+  <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <!-- Modal Header -->
+    <div class="px-6 py-4 border-b border-brand-dark-800 flex items-center justify-between bg-brand-dark-950">
+      <div>
+        <h3 class="text-base font-bold text-brand-text-100 flex items-center gap-2">
+          <span class="material-icons text-brand-primary">search</span>
+          Matching Tickets ({{ globalSearchResults.length }})
+        </h3>
+        <p class="text-xs text-brand-text-400 font-mono mt-0.5">
+          Multiple tickets found for query "<span class="text-brand-text-200 font-bold">{{ lastSearchedQuery }}</span>"
+        </p>
+      </div>
+      <button (click)="showGlobalSearchModal = false" class="text-brand-text-400 hover:text-white transition cursor-pointer p-1 rounded-lg hover:bg-brand-dark-800">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <!-- Modal Results List -->
+    <div class="p-4 overflow-y-auto space-y-3 custom-scrollbar flex-1">
+      <div *ngFor="let item of globalSearchResults" 
+           (click)="navigateToSearchedTicket(item)"
+           class="p-4 bg-brand-dark-950 border border-brand-dark-800 hover:border-brand-primary/60 hover:bg-brand-dark-800/50 rounded-xl cursor-pointer transition flex items-center justify-between group">
+        <div class="space-y-1.5 min-w-0 pr-4">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-mono font-bold text-xs text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded border border-brand-primary/20">
+              {{ item.ticketNumber || ('#' + (item.id || item.ticketId)) }}
+            </span>
+            <span *ngIf="item.docketNumber" class="text-xs font-mono bg-brand-dark-800 text-brand-text-300 px-2 py-0.5 rounded border border-brand-dark-700">
+              Docket: {{ item.docketNumber }}
+            </span>
+            <span [class]="getPriorityBadgeClass(item.priority)" class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+              {{ item.priority || 'Normal' }}
+            </span>
+          </div>
+
+          <h4 class="text-sm font-semibold text-brand-text-100 group-hover:text-brand-primary transition truncate">
+            {{ item.subject }}
+          </h4>
+
+          <div class="flex items-center gap-4 text-xs text-brand-text-400 font-mono flex-wrap">
+            <span *ngIf="item.customerName">👤 {{ item.customerName }}</span>
+            <span *ngIf="item.createdAt">📅 {{ item.createdAt | date:'shortDate' }}</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 shrink-0">
+          <span [class]="getStatusBadgeClass(item.status)" class="text-xs font-bold px-2.5 py-1 rounded-full border">
+            {{ item.status }}
+          </span>
+          <span class="material-icons text-brand-text-400 group-hover:text-brand-primary group-hover:translate-x-1 transition">
+            arrow_forward
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="px-6 py-3 border-t border-brand-dark-800 bg-brand-dark-950 flex items-center justify-between">
+      <span class="text-xs text-brand-text-400 font-mono">Select a ticket to open details</span>
+      <button (click)="showGlobalSearchModal = false" class="px-4 py-1.5 bg-brand-dark-800 hover:bg-brand-dark-700 text-xs font-semibold text-brand-text-200 rounded-lg transition cursor-pointer">
+        Close
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,15 @@
+Microsoft.Data.SqlClient.SqlException (0x80131904): The INSERT statement conflicted with the FOREIGN KEY SAME TABLE constraint "FK_Users_DefaultAssignee". The conflict occurred in database "Ticketing System", table "dbo.Users", column 'Id'.
+Cannot insert the value NULL into column 'UserId', table 'Ticketing System.dbo.UserProducts'; column does not allow nulls. INSERT fails.
+The statement has been terminated.
+The statement has been terminated.
+   at System.Threading.Tasks.ContinuationResultTaskFromResultTask`2.InnerInvoke()
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
+--- End of stack trace from previous location ---
+   at Dapper.SqlMapper.QueryRowAsync[T](IDbConnection cnn, Row row, Type effectiveType, CommandDefinition command) in /_/Dapper/SqlMapper.Async.cs:line 489
+   at ticketing_system_backend.API.Repositories.ManagerRepository.CreateUserAsync(CreateUserRequest request) in C:\Users\USER\Desktop\CRM\BACKEND\ticketing system backend\ticketing system backend\Repository\ManagerRepository.cs:line 658
+   at ticketing_system_backend.Controllers.ManagerController.CreateUser(CreateUserRequest request) in C:\Users\USER\Desktop\CRM\BACKEND\ticketing system backend\ticketing system backend\Controllers\ManagerController.cs:line 722
+ClientConnectionId:83af4c43-a4d5-400e-b043-09517d5a0bd6
+Error Number:547,State:0,Class:16

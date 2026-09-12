@@ -1,0 +1,458 @@
+<div class="customer-dashboard-v3">
+  <header class="dashboard-header-modern">
+    <h1>Customer Support Portal</h1>
+    <p>View, track, and manage your support tickets in real-time.</p>
+  </header>
+
+  <!-- Stats Container -->
+  <div class="stats-grid" *ngIf="!loading && !error">
+    <div class="stat-card-glass card-all">
+      <div class="stat-icon"><span class="material-icons">confirmation_number</span></div>
+      <span class="stat-label">All Tickets</span>
+      <span class="stat-value">{{ allTickets.length }}</span>
+    </div>
+    <div class="stat-card-glass card-waiting">
+      <div class="stat-icon"><span class="material-icons">pending_actions</span></div>
+      <span class="stat-label">Wait for Confirm</span>
+      <span class="stat-value">{{ getWorkDoneTicketCount() }}</span>
+    </div>
+    <div class="stat-card-glass card-open">
+      <div class="stat-icon"><span class="material-icons">folder_open</span></div>
+      <span class="stat-label">Open Tickets</span>
+      <span class="stat-value">{{ getOpenTicketCount() }}</span>
+    </div>
+    <div class="stat-card-glass card-closed">
+      <div class="stat-icon"><span class="material-icons">check_circle</span></div>
+      <span class="stat-label">Closed Tickets</span>
+      <span class="stat-value">{{ getClosedTicketCount() }}</span>
+    </div>
+    <div class="stat-card-glass card-urgent">
+      <div class="stat-icon"><span class="material-icons">warning</span></div>
+      <span class="stat-label">High Priority</span>
+      <span class="stat-value">{{ getHighPriorityCount() }}</span>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="loading-spinner"></div>
+    <p>{{ config.ui.loadingMessage }}</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-container">
+    <div class="error-icon">âš ï¸</div>
+    <p>{{ error }}</p>
+    <button class="modern-btn" (click)="refreshData()">Try Again</button>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="!loading && !error" class="main-content">
+
+    <!-- Ticket Tabs -->
+    <div class="modern-tabs">
+        <button class="tab-btn" [class.active]="activeTab === 'all'" (click)="switchTab('all')">
+          <span class="material-icons">layers</span> All ({{ allTickets.length }})
+        </button>
+        <button class="tab-btn" [class.active]="activeTab === 'open'" (click)="switchTab('open')">
+          <span class="material-icons">folder_open</span> Open ({{ getOpenTicketCount() }})
+        </button>
+        <button class="tab-btn" [class.active]="activeTab === 'waiting'" (click)="switchTab('waiting')">
+          <span class="material-icons">pending</span> Waiting Review ({{ getWorkDoneTicketCount() }})
+        </button>
+        <button class="tab-btn" [class.active]="activeTab === 'closed'" (click)="switchTab('closed')">
+          <span class="material-icons">done_all</span> Closed ({{ getClosedTicketCount() }})
+        </button>
+    </div>
+
+
+      <!-- Standard Filters -->
+      <div class="glass-filters-bar">
+          <!-- Status Filter -->
+          <div class="filter-group">
+            <label>Status</label>
+            <select class="modern-input" [(ngModel)]="activeFilters.status" (change)="onFilterChange()">
+              <option value="">All Statuses</option>
+              <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+            </select>
+          </div>
+
+          <!-- Priority Filter -->
+          <div class="filter-group">
+            <label>Priority</label>
+            <select class="modern-input" [(ngModel)]="activeFilters.priority" (change)="onFilterChange()">
+              <option value="">All Priorities</option>
+              <option *ngFor="let priority of priorityOptions" [value]="priority">{{ priority }}</option>
+            </select>
+          </div>
+
+          <!-- Ticket Number Search -->
+          <div class="filter-group">
+            <label>Search Ticket ID</label>
+            <input type="text" class="modern-input" placeholder="e.g. TICK-123..."
+              [(ngModel)]="activeFilters.ticketNumber" (input)="onFilterChange()">
+          </div>
+
+          <!-- Created Date Range -->
+          <div class="filter-group date-range-group">
+            <label>Created Date Range</label>
+            <div class="date-range-inputs">
+              <input type="date" class="modern-input" placeholder="From" [(ngModel)]="activeFilters.dateFrom"
+                (change)="onFilterChange()">
+              <span class="date-separator">→</span>
+              <input type="date" class="modern-input" placeholder="To" [(ngModel)]="activeFilters.dateTo"
+                (change)="onFilterChange()">
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="filter-actions">
+            <button class="glass-btn" (click)="clearAllFilters()" *ngIf="hasActiveFilters()">
+              <span class="material-icons" style="font-size:16px;">close</span> Clear
+            </button>
+            <button class="glass-btn" (click)="refreshData()" title="Refresh Data">
+              <span class="material-icons" style="font-size:16px;">refresh</span> Refresh
+            </button>
+            <button *ngIf="isFeatureEnabled('newTicket')" class="emerald-btn" (click)="createNewTicket()" title="Create New Ticket">
+              <span class="material-icons" style="font-size:16px;">add</span> New Ticket
+            </button>
+          </div>
+      </div>
+
+        <!-- Applied Filters Display -->
+        <div class="applied-filters" *ngIf="hasActiveFilters()">
+          <span class="applied-label">Active Filters:</span>
+          <div class="filter-tags">
+            <span *ngIf="activeFilters.status" class="filter-tag">
+              Status: {{ activeFilters.status }}
+              <button (click)="clearFilter('status')">×</button>
+            </span>
+            <span *ngIf="activeFilters.priority" class="filter-tag">
+              Priority: {{ activeFilters.priority }}
+              <button (click)="clearFilter('priority')">×</button>
+            </span>
+            <span *ngIf="activeFilters.ticketNumber" class="filter-tag">
+              Ticket: {{ activeFilters.ticketNumber }}
+              <button (click)="clearFilter('ticketNumber')">×</button>
+            </span>
+            <span *ngIf="activeFilters.dateFrom || activeFilters.dateTo" class="filter-tag">
+              Date: {{ formatDateRange() }}
+              <button (click)="clearDateFilter()">×</button>
+            </span>
+          </div>
+        </div>
+
+      <!-- Tab Content (Grid) -->
+      <div class="glass-grid-container">
+        <!-- Empty State -->
+        <div *ngIf="!filteredTickets.length" class="empty-state">
+          <div class="empty-icon"><span class="material-icons" style="font-size: 3rem; color: var(--text-muted);">receipt_long</span></div>
+          <h3>{{ getEmptyStateMessage() }}</h3>
+          <p>{{ getEmptyStateDescription() }}</p>
+          <button *ngIf="isFeatureEnabled('newTicket') && activeTab === 'all' && !hasActiveFilters()"
+            class="modern-btn btn-primary" (click)="createNewTicket()">
+            Create First Ticket
+          </button>
+          <button *ngIf="hasActiveFilters()" class="modern-btn" (click)="clearAllFilters()">
+            Clear Filters
+          </button>
+        </div>
+
+        <!-- Custom Grid Table (PM Dashboard Style) -->
+        <div class="custom-grid-wrapper" *ngIf="filteredTickets.length">
+          <!-- Table Grid Header -->
+          <div class="grid grid-cols-12 gap-3 px-5 py-3 border-b border-brand-dark-800 text-[10px] font-bold text-brand-text-400 font-mono uppercase tracking-widest select-none">
+            <div class="col-span-2 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('id')">
+              Ticket Number
+              <span *ngIf="sortColumn === 'id'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </div>
+            <div class="col-span-3 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('subject')">
+              Subject
+              <span *ngIf="sortColumn === 'subject'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </div>
+            <div class="col-span-2 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('priority')">
+              Priority
+              <span *ngIf="sortColumn === 'priority'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </div>
+            <div class="col-span-2 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('createdOn')">
+              Created
+              <span *ngIf="sortColumn === 'createdOn'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </div>
+            <div class="col-span-2 cursor-pointer hover:text-brand-text-100 transition" (click)="onSort('status')">
+              Status
+              <span *ngIf="sortColumn === 'status'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </div>
+            <div class="col-span-1 text-center">
+              Files
+            </div>
+          </div>
+
+          <!-- Table Grid Body -->
+          <div class="divide-y divide-brand-dark-800">
+            <div *ngFor="let ticket of paginatedTickets" 
+                 (click)="viewTicketDetails(ticket)"
+                 class="grid grid-cols-12 gap-3 px-5 py-3.5 hover:bg-brand-dark-700/30 cursor-pointer transition items-center text-xs text-brand-text-300">
+              
+              <div class="col-span-2 font-mono font-medium text-brand-primary">
+                {{ ticket.ticketNumber || 'TKT-' + ticket.id.toString().padStart(6, '0') }}
+              </div>
+              <div class="col-span-3 font-semibold text-brand-text-100 truncate pr-4">
+                {{ ticket.subject }}
+              </div>
+              <div class="col-span-2 flex">
+                <span class="priority-badge" [ngClass]="[getCssClass('priority', ticket.priority), 'locked-badge']">
+                  {{ ticket.priority }}
+                </span>
+              </div>
+              <div class="col-span-2 font-mono text-[10px] text-brand-text-400">
+                {{ formatDate(ticket.createdOn) }}
+              </div>
+              <div class="col-span-2 flex">
+                <span class="status-badge" [ngClass]="[getCssClass('status', getDisplayStatus(ticket)), 'locked-badge']">
+                  {{ getDisplayStatus(ticket) }}
+                </span>
+              </div>
+              <div class="col-span-1 text-center" (click)="$event.stopPropagation()">
+                <button *ngIf="ticket.hasAttachment && ticket.attachmentCount > 0" class="attachment-btn"
+                  (click)="viewAttachment(ticket)" title="View attachments">
+                  <span class="material-icons" style="font-size:14px; vertical-align: middle;">attach_file</span> {{ ticket.attachmentCount }}
+                </button>
+                <span *ngIf="!ticket.hasAttachment || ticket.attachmentCount === 0" class="no-attachment">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid Pagination Footer -->
+          <div class="px-5 py-4 border-t border-brand-dark-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-brand-text-400 font-mono select-none">
+            <div>
+              Showing {{ getStartRecord() }} - {{ getEndRecord() }} of {{ totalRecords }} records
+            </div>
+            
+            <div class="flex items-center gap-4">
+              <!-- Page size -->
+              <div class="flex items-center gap-2">
+                <span>Show:</span>
+                <select [(ngModel)]="pageSize" (change)="onPageSizeChange()" 
+                        class="bg-brand-dark-950 border border-brand-dark-800 rounded px-1.5 py-0.5 text-brand-text-100 focus:outline-none">
+                  <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+                </select>
+              </div>
+
+              <!-- Buttons -->
+              <div class="flex items-center gap-1">
+                <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1); $event.stopPropagation()"
+                        class="px-2.5 py-1 bg-brand-dark-950 border border-brand-dark-800 rounded hover:bg-brand-dark-700 disabled:opacity-40 transition cursor-pointer">
+                  ‹
+                </button>
+                
+                <button *ngFor="let page of getPageNumbers()" 
+                        [class.bg-brand-primary]="page === currentPage"
+                        [class.text-white]="page === currentPage"
+                        [class.border-brand-primary]="page === currentPage"
+                        (click)="onPageChange(page); $event.stopPropagation()"
+                        class="px-2.5 py-1 bg-brand-dark-950 border border-brand-dark-800 rounded hover:bg-brand-dark-700 transition cursor-pointer">
+                  {{ page }}
+                </button>
+                
+                <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1); $event.stopPropagation()"
+                        class="px-2.5 py-1 bg-brand-dark-950 border border-brand-dark-800 rounded hover:bg-brand-dark-700 disabled:opacity-40 transition cursor-pointer">
+                  ›
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- Chat Modal (ADDED) -->
+<div class="modal-overlay" *ngIf="showChatModal" (click)="closeChatModal()">
+  <div class="modal-content chat-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Chat - Ticket #{{ currentChatTicket?.ticketNumber }}</h2>
+      <button class="close-btn" (click)="closeChatModal()">Ã—</button>
+    </div>
+
+    <div class="modal-body chat-body">
+      <div *ngIf="!chatMessages.length" class="empty-chat">
+        <p>No messages yet. Start the conversation!</p>
+      </div>
+
+      <div *ngFor="let msg of chatMessages" class="chat-message"
+        [class.message-mine]="msg.postedByUserRole === 'Customer'"
+        [class.message-other]="msg.postedByUserRole !== 'Customer'">
+
+        <div class="message-meta">
+          <span class="message-author">{{ msg.postedByName }}</span>
+          <span class="message-time">{{ msg.postedOn | date:'h:mm a':'+0530' }}</span>
+        </div>
+        <div class="message-bubble">
+          {{ msg.commentText }}
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer chat-footer">
+      <div class="chat-input-area">
+        <textarea [(ngModel)]="newMessageText" placeholder="Type a message to the PM..." rows="2"
+          (keydown.enter)="$event.preventDefault(); sendMessage()">
+        </textarea>
+        <button class="modern-btn btn-primary send-btn" [disabled]="!newMessageText.trim() || isSendingMessage"
+          (click)="sendMessage()">
+          {{ isSendingMessage ? 'Sending...' : 'Send' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<!-- Rest of your existing modals would go here -->
+<!-- Close Ticket Confirmation Modal -->
+<div *ngIf="showCloseConfirmModal" class="modal-overlay" (click)="cancelCloseTicket()">
+  <div class="confirmation-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Confirm Ticket Closure</h3>
+      <button class="modal-close" (click)="cancelCloseTicket()">×</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="warning-icon"><span class="material-icons" style="font-size: 3rem; color: #f59e0b;">warning</span></div>
+      <h4>Are you sure you want to close this ticket?</h4>
+      <p>Once a ticket is closed, you will not be able to reopen it or change its status again.</p>
+      <div class="ticket-details" *ngIf="ticketToClose">
+        <p><strong>Ticket ID:</strong> #{{ ticketToClose.id }}</p>
+        <p><strong>Current Status:</strong> {{ ticketToClose.currentStatus }}</p>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="modern-btn" (click)="cancelCloseTicket()">Cancel</button>
+      <button class="modern-btn btn-danger" (click)="confirmCloseTicket()">Yes, Close Ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- File Attachment Modal -->
+<div *ngIf="showFileModal && selectedFileAttachment" class="modal-overlay" (click)="closeFileModal()">
+  <div class="file-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Attachments - Ticket #{{ selectedFileAttachment.ticket.id }}</h3>
+      <button class="modal-close" (click)="closeFileModal()">×</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="ticket-info">
+        <p><strong>Subject:</strong> {{ selectedFileAttachment.ticket.subject }}</p>
+        <p><strong>Attachments:</strong> {{ selectedFileAttachment.attachments.length }} file(s)</p>
+      </div>
+
+      <div class="attachments-list">
+        <div *ngFor="let attachment of selectedFileAttachment.attachments" class="attachment-item">
+          <div class="attachment-info">
+            <div class="file-icon">
+              <span *ngIf="attachment.contentType?.includes('image')"><span class="material-icons">image</span></span>
+              <span *ngIf="attachment.contentType?.includes('pdf')"><span class="material-icons">picture_as_pdf</span></span>
+              <span *ngIf="attachment.contentType?.includes('text')"><span class="material-icons">description</span></span>
+              <span
+                *ngIf="!attachment.contentType?.includes('image') && !attachment.contentType?.includes('pdf') && !attachment.contentType?.includes('text')"><span class="material-icons">attach_file</span></span>
+            </div>
+            <div class="file-details">
+              <div class="file-name">{{ attachment.fileName }}</div>
+              <div class="file-meta">
+                <span class="file-size">{{ formatFileSize(attachment.fileSize) }}</span>
+                <span class="file-type">{{ attachment.contentType }}</span>
+                <span class="upload-date">Uploaded: {{ formatDate(attachment.uploadedOn) }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="attachment-actions">
+            <button class="modern-btn btn-small"
+              (click)="downloadAttachment(selectedFileAttachment.ticket.id, attachment)" title="Download file">
+              <span class="material-icons" style="font-size: 14px;">download</span> Download
+            </button>
+            <button *ngIf="attachment.contentType?.includes('image') || attachment.contentType?.includes('pdf')"
+              class="modern-btn btn-small" (click)="previewAttachment(attachment)" title="Preview file">
+              <span class="material-icons" style="font-size: 14px;">visibility</span> Preview
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="modern-btn" (click)="closeFileModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- History Modal -->
+<div *ngIf="showHistoryModal && selectedTicketHistory" class="modal-overlay" (click)="closeHistoryModal()">
+  <div class="history-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Ticket History - #{{ selectedTicketHistory.ticket.id }}</h3>
+      <button class="modal-close" (click)="closeHistoryModal()">âœ–</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="ticket-info">
+        <p><strong>Subject:</strong> {{ selectedTicketHistory.ticket.subject }}</p>
+        <p><strong>Current Status:</strong>
+          <span class="status-badge" [ngClass]="getCssClass('status', getDisplayStatus(selectedTicketHistory.ticket))">
+            {{ getDisplayStatus(selectedTicketHistory.ticket) }}
+          </span>
+        </p>
+        <p><strong>Priority:</strong>
+          <span class="priority-badge" [ngClass]="getCssClass('priority', selectedTicketHistory.ticket.priority)">
+            {{ selectedTicketHistory.ticket.priority }}
+          </span>
+        </p>
+      </div>
+
+      <div class="history-section">
+        <h4>Timeline ({{ selectedTicketHistory.history.length }} events)</h4>
+
+        <div *ngIf="selectedTicketHistory.history.length === 0" class="no-history">
+          <div class="empty-icon"><span class="material-icons" style="font-size: 3rem; color: var(--text-muted);">history</span></div>
+          <p>No history events found for this ticket.</p>
+        </div>
+
+        <div class="history-timeline" *ngIf="selectedTicketHistory.history.length > 0">
+          <div *ngFor="let event of selectedTicketHistory.history; let i = index" class="history-event"
+            [class.latest]="i === 0">
+            <div class="event-indicator">
+              <span class="event-icon">{{ getHistoryEventIcon(event.eventDescription) }}</span>
+              <div class="event-line" *ngIf="i < selectedTicketHistory.history.length - 1"></div>
+            </div>
+
+            <div class="event-content">
+              <div class="event-header">
+                <div class="event-description">{{ event.eventDescription }}</div>
+                <div class="event-timestamp">{{ formatHistoryTimestamp(event.timestamp) }}</div>
+              </div>
+
+              <div class="event-details">
+                <div class="event-user">
+                  <span class="user-name">{{ event.changedByUserName || 'System' }}</span>
+                  <span class="user-role" [ngClass]="'role-' + (event.changedByUserRole || 'system').toLowerCase()">
+                    {{ getRoleDisplayName(event.changedByUserRole) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <div class="history-summary">
+        <small>Showing all {{ selectedTicketHistory.history.length }} history events</small>
+      </div>
+      <button class="modern-btn" (click)="closeHistoryModal()">Close</button>
+    </div>
+  </div>
+</div>
+

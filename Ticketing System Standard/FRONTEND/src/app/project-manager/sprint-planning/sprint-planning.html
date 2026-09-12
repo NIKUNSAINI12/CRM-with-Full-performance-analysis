@@ -1,0 +1,787 @@
+<div class="sprint-planning-container min-h-screen text-brand-text-100 bg-brand-dark-950">
+  
+  <!-- Header Section -->
+  <div class="flex items-center justify-between mb-4 border-b border-brand-dark-800 pb-3">
+    <div>
+      <h1 class="text-xl font-bold tracking-tight text-brand-text-100 flex items-center gap-2">
+        <span class="material-icons text-amber-500 font-bold text-lg">sprint</span>
+        Sprint Board
+      </h1>
+      <p class="text-[11px] text-brand-text-400 mt-0.5">Plan sprints, allocate issues, and track delivery velocity.</p>
+    </div>
+    
+    <button (click)="openCreateModal()" class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-brand-dark-950 font-semibold rounded-md text-xs transition shadow-lg shadow-amber-500/10">
+      <span class="material-icons text-base">add</span>
+      Create Sprint
+    </button>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="flex items-center gap-3 mb-4 border-b border-brand-dark-800 pb-px select-none">
+    <button (click)="switchTab('backlog')" 
+            [class.border-amber-500]="activeTab === 'backlog'"
+            [class.text-amber-500]="activeTab === 'backlog'"
+            [class.text-brand-text-400]="activeTab !== 'backlog'"
+            class="px-3 py-1.5 border-b-2 border-transparent font-semibold text-xs transition hover:text-brand-text-100 cursor-pointer">
+      Backlog &amp; Planning
+    </button>
+    <button (click)="switchTab('analytics')" 
+            [class.border-amber-500]="activeTab === 'analytics'"
+            [class.text-amber-500]="activeTab === 'analytics'"
+            [class.text-brand-text-400]="activeTab !== 'analytics'"
+            class="px-3 py-1.5 border-b-2 border-transparent font-semibold text-xs transition hover:text-brand-text-100 cursor-pointer flex items-center gap-1">
+      <span class="material-icons text-base">analytics</span>
+      Analytics
+    </button>
+    <button (click)="switchTab('completed')" 
+            [class.border-amber-500]="activeTab === 'completed'"
+            [class.text-amber-500]="activeTab === 'completed'"
+            [class.text-brand-text-400]="activeTab !== 'completed'"
+            class="px-3 py-1.5 border-b-2 border-transparent font-semibold text-xs transition hover:text-brand-text-100 cursor-pointer flex items-center gap-1">
+      <span class="material-icons text-base">history</span>
+      Completed Sprints
+    </button>
+  </div>
+
+  <!-- Messages -->
+  <div *ngIf="successMessage" class="mb-5 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm flex items-center gap-2 animate-fadeIn">
+    <span class="material-icons text-base">check_circle</span>
+    {{ successMessage }}
+  </div>
+  <div *ngIf="errorMessage" class="mb-5 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm flex items-center gap-2 animate-fadeIn">
+    <span class="material-icons text-base">error</span>
+    {{ errorMessage }}
+  </div>
+
+  <!-- ========== TAB 1: Jira-Style Vertical Backlog & Planning ========== -->
+  <div *ngIf="activeTab === 'backlog'" cdkDropListGroup class="space-y-4 animate-fadeIn">
+
+    <!-- Loading Overlay -->
+    <div *ngIf="isLoading" class="flex items-center justify-center py-20 gap-3">
+      <div class="w-6 h-6 border-2 border-brand-dark-800 border-t-amber-500 rounded-full animate-spin"></div>
+      <span class="text-xs text-brand-text-400 font-mono">Loading sprint data...</span>
+    </div>
+
+    <!-- Sprint Panels (each sprint is a collapsible vertical panel) -->
+    <div *ngFor="let s of activeAndFutureSprints" class="rounded-xl border transition"
+         [class.border-emerald-500/30]="s.status === 'Active'"
+         [class.border-brand-dark-800]="s.status !== 'Active'"
+         [class.bg-brand-dark-900]="true">
+
+      <!-- Sprint Panel Header -->
+      <div class="flex items-center gap-2 px-3 py-2 cursor-pointer select-none"
+           (click)="toggleSprintPanel(s.sprintId!)">
+        <!-- Collapse Icon -->
+        <span class="material-icons text-sm text-brand-text-400 transition-transform"
+              [class.rotate-0]="!isSprintCollapsed(s.sprintId!)"
+              [class.-rotate-90]="isSprintCollapsed(s.sprintId!)">
+          expand_more
+        </span>
+
+        <!-- Sprint Name & Dates -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-bold text-xs text-brand-text-100">{{ s.sprintName }}</span>
+            <span [ngClass]="getSprintStatusBadgeClass(s.status)" class="px-2 py-0.5 rounded text-[10px] font-semibold border font-mono">
+              {{ s.status }}
+            </span>
+            <span class="text-[10px] text-brand-text-400 font-mono flex items-center gap-1">
+              <span class="material-icons text-[10px]">date_range</span>
+              {{ s.startDate | date:'d MMM':'+0530' }} – {{ s.endDate | date:'d MMM yyyy':'+0530' }}
+            </span>
+            <!-- Ticket count badges -->
+            <div class="flex items-center gap-1.5 ml-1" *ngIf="getSprintTickets(s.sprintId!).length > 0">
+              <span class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px] font-mono border border-blue-500/20" 
+                    *ngIf="getSprintTicketCounts(s.sprintId!).open > 0">
+                {{ getSprintTicketCounts(s.sprintId!).open }} To Do
+              </span>
+              <span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-mono border border-amber-500/20"
+                    *ngIf="getSprintTicketCounts(s.sprintId!).progress > 0">
+                {{ getSprintTicketCounts(s.sprintId!).progress }} In Progress
+              </span>
+              <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-mono border border-emerald-500/20"
+                    *ngIf="getSprintTicketCounts(s.sprintId!).done > 0">
+                {{ getSprintTicketCounts(s.sprintId!).done }} Done
+              </span>
+              <span class="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[10px] font-mono border border-purple-500/20"
+                    *ngIf="getSprintTicketCounts(s.sprintId!).onhold > 0">
+                {{ getSprintTicketCounts(s.sprintId!).onhold }} On Hold
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sprint Actions -->
+        <div class="flex items-center gap-2 shrink-0" (click)="$event.stopPropagation()">
+          <!-- Bulk assign button if backlog tickets are checked -->
+          <button *ngIf="selectedBacklogTicketIds.size > 0" (click)="moveSelectedToSprint(s.sprintId!)"
+                  class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-brand-dark-950 font-bold text-[10.5px] rounded-lg transition flex items-center gap-1">
+            <span class="material-icons text-xs">add</span>
+            Move Selected Here ({{ selectedBacklogTicketIds.size }})
+          </button>
+          
+          <!-- Start Sprint (only for Future sprints) -->
+          <button *ngIf="s.status === 'Future'" (click)="startSprint(s)"
+                  class="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-[11px] rounded-md transition flex items-center gap-1 shadow shadow-emerald-500/20">
+            <span class="material-icons text-xs">play_arrow</span>
+            Start Sprint
+          </button>
+          <!-- Complete Sprint (only for Active sprints) -->
+          <button *ngIf="s.status === 'Active'" (click)="openCompleteModal(s)"
+                  class="px-2.5 py-1 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold text-[11px] rounded-md transition flex items-center gap-1">
+            <span class="material-icons text-xs">flag</span>
+            Complete
+          </button>
+          <!-- Edit & Delete -->
+          <button (click)="openEditModal(s)" class="p-1 text-brand-text-400 hover:text-amber-500 transition rounded" title="Edit Sprint">
+            <span class="material-icons text-xs">edit</span>
+          </button>
+          <button (click)="deleteSprint(s.sprintId!)" class="p-1 text-brand-text-400 hover:text-red-500 transition rounded" title="Delete Sprint">
+            <span class="material-icons text-xs">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Sprint Ticket List (Collapsible) -->
+      <div *ngIf="!isSprintCollapsed(s.sprintId!)" class="border-t border-brand-dark-800 min-h-[40px] pb-2"
+           cdkDropList
+           [id]="'sprint-' + s.sprintId"
+           [cdkDropListData]="getSprintTickets(s.sprintId!)"
+           (cdkDropListDropped)="onDrop($event)">
+        <!-- Sprint Tickets -->
+        <div *ngFor="let t of getSprintTickets(s.sprintId!)"
+             cdkDrag
+             [cdkDragData]="t"
+             class="flex items-center gap-3 px-3 py-1.5 border-b border-brand-dark-800/40 hover:bg-brand-dark-800/20 transition group bg-brand-dark-900">
+             
+          <!-- Custom Drag Preview (Fixes positional jumping) -->
+          <div *cdkDragPreview class="bg-brand-dark-850 border border-amber-500/50 rounded-lg shadow-xl shadow-amber-500/10 px-4 py-2 flex items-center gap-3 text-brand-text-100 min-w-[300px]">
+             <span class="material-icons text-amber-500">drag_indicator</span>
+             <span class="font-bold font-mono text-xs">{{ t.ticketNumber }}</span>
+             <span class="text-xs truncate">{{ t.subject }}</span>
+          </div>
+          
+          <!-- Custom Placeholder -->
+          <div *cdkDragPlaceholder class="bg-brand-dark-800/30 border-2 border-dashed border-brand-dark-700 min-h-[40px] rounded-lg"></div>
+
+          <!-- Drag Handle -->
+          <div cdkDragHandle class="cursor-grab active:cursor-grabbing p-1 text-brand-text-600 hover:text-amber-500 transition -ml-1 shrink-0 flex items-center justify-center">
+            <span class="material-icons text-sm">drag_indicator</span>
+          </div>
+          
+          <!-- Checkbox for bulk select -->
+          <input type="checkbox" 
+                 [checked]="selectedSprintTicketIds.has(t.id)"
+                 (change)="toggleSprintTicketSelection(t.id)"
+                 (click)="$event.stopPropagation()"
+                 class="rounded border-brand-dark-700 bg-brand-dark-950 text-red-500 focus:ring-0 focus:ring-offset-0 cursor-pointer">
+          
+          <!-- Ticket # -->
+          <span (click)="goToTicket(t.id)" class="text-[10px] font-mono text-brand-text-400 font-bold bg-brand-dark-950 px-1.5 py-0.5 rounded border border-brand-dark-800 shrink-0 cursor-pointer hover:text-amber-500 hover:border-amber-500/30 transition">
+            {{ t.ticketNumber }}
+          </span>
+          <!-- Subject -->
+          <span (click)="goToTicket(t.id)" class="flex-1 text-xs text-brand-text-100 truncate font-medium cursor-pointer hover:text-amber-500 transition">{{ t.subject }}</span>
+          <!-- Customer -->
+          <span class="text-[10px] text-brand-text-400 truncate max-w-[120px] hidden sm:block">{{ t.customerName }}</span>
+          <!-- Assignee -->
+          <span class="text-[10px] text-brand-text-400 truncate max-w-[100px] hidden md:flex items-center gap-1">
+            <span class="material-icons text-[10px]">person</span>
+            {{ t.assignedToName || 'Unassigned' }}
+          </span>
+          <!-- Priority -->
+          <span [ngClass]="getPriorityBadgeClass(t.priority)" class="px-1.5 py-0.5 rounded text-[9px] font-semibold border font-mono shrink-0 hidden sm:block">
+            {{ t.priority }}
+          </span>
+          <!-- Status -->
+          <span [style.background-color]="getStatusColor(t.status) + '15'" 
+                [style.color]="getStatusColor(t.status)" 
+                [style.border-color]="getStatusColor(t.status) + '30'" 
+                class="px-1.5 py-0.5 rounded text-[9px] font-semibold border font-mono shrink-0">
+            {{ t.status }}
+          </span>
+          <!-- Remove from Sprint -->
+          <button (click)="removeSingleTicketFromSprint(t.id)"
+                  class="opacity-0 group-hover:opacity-100 p-1 text-brand-text-400 hover:text-red-500 transition rounded shrink-0" 
+                  title="Remove from Sprint">
+            <span class="material-icons text-sm">close</span>
+          </button>
+        </div>
+
+        <!-- Empty Sprint Placeholder -->
+        <div *ngIf="getSprintTickets(s.sprintId!).length === 0"
+             class="px-5 py-6 text-center text-brand-text-400 text-xs italic border-2 border-dashed border-brand-dark-800/60 m-4 rounded-lg">
+          No issues in this sprint. Drag issues from the backlog below, or use the "Add to Sprint" button on each issue.
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty Sprints State -->
+    <div *ngIf="activeAndFutureSprints.length === 0 && !isLoading" class="text-center py-10 text-brand-text-400 text-xs bg-brand-dark-900 border border-brand-dark-800 rounded-xl p-8">
+      <span class="material-icons text-3xl opacity-20 block mb-2">sprint</span>
+      No sprints created yet. Click "Create Sprint" to get started.
+    </div>
+
+    <!-- ===== BACKLOG SECTION (bottom of page, like Jira) ===== -->
+    <div class="rounded-xl border border-brand-dark-800 bg-brand-dark-900">
+      <!-- Backlog Header -->
+      <div class="flex items-center gap-2 px-3 py-2 border-b border-brand-dark-800">
+        <!-- Collapse Icon -->
+        <span class="material-icons text-sm text-brand-text-400 transition-transform cursor-pointer select-none"
+              (click)="isBacklogCollapsed = !isBacklogCollapsed"
+              [class.rotate-0]="!isBacklogCollapsed"
+              [class.-rotate-90]="isBacklogCollapsed">
+          expand_more
+        </span>
+        
+        <!-- Backlog Info -->
+        <div class="flex items-center gap-2 flex-1 cursor-pointer select-none" (click)="isBacklogCollapsed = !isBacklogCollapsed">
+          <span class="material-icons text-sm text-brand-text-400">inventory_2</span>
+          <span class="font-bold text-sm text-brand-text-100">Backlog</span>
+          <span class="text-[10px] font-mono text-brand-text-400 bg-brand-dark-800 px-1.5 py-0.5 rounded">
+            {{ backlogTickets.length }} issues
+          </span>
+          <span *ngIf="backlogSearchQuery" class="text-[10px] font-mono text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-fadeIn">
+            Found {{ filteredBacklogTickets.length }}
+          </span>
+        </div>
+
+        <!-- Bulk remove button if sprint tickets are checked -->
+        <button *ngIf="selectedSprintTicketIds.size > 0" (click)="moveSelectedToBacklog()"
+                class="px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-bold text-[10.5px] rounded-lg transition flex items-center gap-1">
+          <span class="material-icons text-xs">logout</span>
+          Move Selected to Backlog ({{ selectedSprintTicketIds.size }})
+        </button>
+      </div>
+
+      <!-- Backlog Search Input (only shown when backlog is expanded) -->
+      <div *ngIf="!isBacklogCollapsed" class="px-3 py-2 border-b border-brand-dark-800/60 bg-brand-dark-950/20 flex items-center gap-2">
+        <div class="relative flex-1">
+          <span class="material-icons text-brand-text-400 text-sm absolute left-3 top-1/2 -translate-y-1/2">search</span>
+          <input type="text" 
+                 placeholder="Search backlog by ticket ID or subject..." 
+                 [(ngModel)]="backlogSearchQuery"
+                 class="w-full pl-9 pr-8 py-1.5 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-xs text-brand-text-100 placeholder-brand-text-400 focus:outline-none focus:border-amber-500 transition">
+          <button *ngIf="backlogSearchQuery" 
+                  (click)="backlogSearchQuery = ''"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-brand-text-400 hover:text-brand-text-100 transition flex items-center">
+            <span class="material-icons text-sm">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Backlog Issue List -->
+      <div *ngIf="!isBacklogCollapsed"
+           cdkDropList
+           id="backlog"
+           [cdkDropListData]="filteredBacklogTickets"
+           (cdkDropListDropped)="onDrop($event)">
+        <div *ngFor="let t of filteredBacklogTickets"
+             cdkDrag
+             [cdkDragData]="t"
+             class="flex items-center gap-3 px-3 py-1.5 border-b border-brand-dark-800/40 hover:bg-brand-dark-800/20 transition group bg-brand-dark-900">
+             
+          <!-- Custom Drag Preview -->
+          <div *cdkDragPreview class="bg-brand-dark-850 border border-amber-500/50 rounded-lg shadow-xl shadow-amber-500/10 px-4 py-2 flex items-center gap-3 text-brand-text-100 min-w-[300px]">
+             <span class="material-icons text-amber-500">drag_indicator</span>
+             <span class="font-bold font-mono text-xs">{{ t.ticketNumber }}</span>
+             <span class="text-xs truncate">{{ t.subject }}</span>
+          </div>
+          
+          <!-- Custom Placeholder -->
+          <div *cdkDragPlaceholder class="bg-brand-dark-800/30 border-2 border-dashed border-brand-dark-700 min-h-[40px] rounded-lg"></div>
+
+          <!-- Drag Handle -->
+          <div cdkDragHandle class="cursor-grab active:cursor-grabbing p-1 text-brand-text-600 hover:text-amber-500 transition -ml-1 shrink-0 flex items-center justify-center">
+            <span class="material-icons text-sm">drag_indicator</span>
+          </div>
+          
+          <!-- Checkbox for bulk select -->
+          <input type="checkbox" 
+                 [checked]="selectedBacklogTicketIds.has(t.id)"
+                 (change)="toggleBacklogTicketSelection(t.id)"
+                 (click)="$event.stopPropagation()"
+                 class="rounded border-brand-dark-700 bg-brand-dark-950 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer">
+          
+          <!-- Ticket # -->
+          <span (click)="goToTicket(t.id)" class="text-[10px] font-mono text-brand-text-400 font-bold bg-brand-dark-950 px-1.5 py-0.5 rounded border border-brand-dark-800 shrink-0 cursor-pointer hover:text-amber-500 hover:border-amber-500/30 transition">
+            {{ t.ticketNumber }}
+          </span>
+          <!-- Subject -->
+          <span (click)="goToTicket(t.id)" class="flex-1 text-xs text-brand-text-100 truncate font-medium cursor-pointer hover:text-amber-500 transition">{{ t.subject }}</span>
+          <!-- Customer -->
+          <span class="text-[10px] text-brand-text-400 truncate max-w-[120px] hidden sm:block">{{ t.customerName }}</span>
+          <!-- Assignee -->
+          <span class="text-[10px] text-brand-text-400 truncate max-w-[100px] hidden md:flex items-center gap-1">
+            <span class="material-icons text-[10px]">person</span>
+            {{ t.assignedToName || 'Unassigned' }}
+          </span>
+          <!-- Priority -->
+          <span [ngClass]="getPriorityBadgeClass(t.priority)" class="px-1.5 py-0.5 rounded text-[9px] font-semibold border font-mono shrink-0 hidden sm:block">
+            {{ t.priority }}
+          </span>
+          <!-- Status -->
+          <span [style.background-color]="getStatusColor(t.status) + '15'" 
+                [style.color]="getStatusColor(t.status)" 
+                [style.border-color]="getStatusColor(t.status) + '30'" 
+                class="px-1.5 py-0.5 rounded text-[9px] font-semibold border font-mono shrink-0">
+            {{ t.status }}
+          </span>
+          <!-- Add to Sprint dropdown (always visible for easy discovery) -->
+          <div class="transition shrink-0" (click)="$event.stopPropagation()">
+            <select (change)="onTicketSprintChange(t.id, $event)" 
+                    class="bg-brand-dark-850 border border-brand-dark-700 rounded px-2 py-1 text-[10px] text-brand-text-200 outline-none cursor-pointer hover:border-amber-500 transition">
+              <option value="">+ Add to Sprint</option>
+              <option *ngFor="let s of activeAndFutureSprints" [value]="s.sprintId">{{ s.sprintName }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Empty Backlog -->
+        <div *ngIf="backlogTickets.length === 0" class="px-5 py-10 text-center text-brand-text-400 text-xs italic">
+          Backlog is empty. All issues have been assigned to sprints! 🎉
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========== TAB 2: Analytics Dashboard ========== -->
+  <div *ngIf="activeTab === 'analytics'" class="space-y-6 animate-fadeIn">
+    
+    <!-- Top KPI Cards -->
+    <div class="grid grid-cols-4 gap-3 md:gap-4" *ngIf="sprintAnalyticsData">
+      <div class="p-4 bg-brand-dark-900 border border-brand-dark-800 rounded-xl relative overflow-hidden">
+        <div class="text-2xl font-bold text-brand-text-100">
+          {{ sprintAnalyticsData.sprints.length }}
+        </div>
+        <div class="text-xs text-brand-text-400 font-mono mt-1">Total Sprints Run</div>
+      </div>
+      
+      <div class="p-4 bg-brand-dark-900 border border-brand-dark-800 rounded-xl relative overflow-hidden">
+        <div class="text-2xl font-bold text-emerald-400">
+          {{ sprintAnalyticsData.weeklyCompletion.length > 0 ? sprintAnalyticsData.weeklyCompletion[0].completedCount : 0 }}
+        </div>
+        <div class="text-xs text-brand-text-400 font-mono mt-1">Completed This Week</div>
+      </div>
+
+      <div class="p-4 bg-brand-dark-900 border border-brand-dark-800 rounded-xl relative overflow-hidden">
+        <div class="text-2xl font-bold text-amber-500">
+          {{ sprintAnalyticsData.monthlyCompletion.length > 0 ? sprintAnalyticsData.monthlyCompletion[0].completedCount : 0 }}
+        </div>
+        <div class="text-xs text-brand-text-400 font-mono mt-1">Completed This Month</div>
+      </div>
+
+      <div class="p-4 bg-brand-dark-900 border border-brand-dark-800 rounded-xl relative overflow-hidden">
+        <div class="text-2xl font-bold text-blue-400">
+          {{ sprintAnalyticsData.yearlyCompletion.length > 0 ? sprintAnalyticsData.yearlyCompletion[0].completedCount : 0 }}
+        </div>
+        <div class="text-xs text-brand-text-400 font-mono mt-1">Completed This Year</div>
+      </div>
+    </div>
+
+    <!-- Sprint Velocity & Performance -->
+    <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl p-5">
+      <h3 class="text-sm font-bold text-brand-text-200 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+        <span class="material-icons text-brand-text-400 text-sm">sprint</span>
+        Sprint Performance Analysis
+      </h3>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-brand-dark-800 text-[10px] text-brand-text-400 font-mono uppercase tracking-wider">
+              <th class="py-2.5">Sprint Name</th>
+              <th class="py-2.5">Dates</th>
+              <th class="py-2.5">Status</th>
+              <th class="py-2.5 text-center">Total Tickets</th>
+              <th class="py-2.5 text-center text-emerald-400">Completed</th>
+              <th class="py-2.5 text-center text-amber-400">In Progress</th>
+              <th class="py-2.5 text-center text-blue-400">Open</th>
+              <th class="py-2.5 text-right">Completion Rate</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-brand-dark-800/60" *ngIf="sprintAnalyticsData">
+            <tr *ngFor="let s of sprintAnalyticsData.sprints" class="hover:bg-brand-dark-950/40 transition">
+              <td class="py-3 font-semibold text-brand-text-100">{{ s.sprintName }}</td>
+              <td class="py-3 text-brand-text-400 text-[11px]">{{ s.startDate | date:'d MMM':'+0530' }} - {{ s.endDate | date:'d MMM yyyy':'+0530' }}</td>
+              <td class="py-3">
+                <span [ngClass]="getSprintStatusBadgeClass(s.status)" class="px-2 py-0.5 rounded text-[10px] font-semibold border font-mono">
+                  {{ s.status }}
+                </span>
+              </td>
+              <td class="py-3 text-center font-bold text-brand-text-200">{{ s.totalTickets }}</td>
+              <td class="py-3 text-center text-emerald-400 font-semibold">{{ s.completedTickets }}</td>
+              <td class="py-3 text-center text-amber-400 font-semibold">{{ s.inProgressTickets }}</td>
+              <td class="py-3 text-center text-blue-400 font-semibold">{{ s.openTickets }}</td>
+              <td class="py-3 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <span class="font-bold font-mono">{{ s.totalTickets > 0 ? Math.round((s.completedTickets / s.totalTickets) * 100) : 0 }}%</span>
+                  <div class="w-16 h-1.5 rounded-full bg-brand-dark-850 overflow-hidden flex">
+                    <div class="bg-emerald-500 h-full" [style.width.%]="s.totalTickets > 0 ? Math.round((s.completedTickets / s.totalTickets) * 100) : 0"></div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="sprintAnalyticsData.sprints.length === 0">
+              <td colspan="8" class="text-center py-10 text-brand-text-500">No sprint historical data found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Week-by-Week & Month-by-Month Trends -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- Week-by-Week -->
+      <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl p-5 flex flex-col h-[400px]">
+        <h3 class="text-sm font-bold text-brand-text-200 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+          <span class="material-icons text-brand-text-400 text-sm">show_chart</span>
+          Weekly Completion Trends
+        </h3>
+        
+        <div class="overflow-y-auto flex-1 pr-1 divide-y divide-brand-dark-800/50" *ngIf="sprintAnalyticsData">
+          <div *ngFor="let w of sprintAnalyticsData.weeklyCompletion" class="py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="material-icons text-xs text-brand-text-400">calendar_view_week</span>
+              <span class="text-xs font-semibold text-brand-text-100">Week {{ w.week }} ({{ w.year }})</span>
+            </div>
+            
+            <div class="flex items-center gap-4 flex-1 justify-end">
+              <div class="w-24 md:w-48 h-2 rounded bg-brand-dark-950 overflow-hidden">
+                <div class="bg-amber-500 h-full rounded" [style.width.%]="Math.min(w.completedCount * 8, 100)"></div>
+              </div>
+              <span class="text-xs font-bold font-mono text-brand-text-200 w-10 text-right">{{ w.completedCount }} tickets</span>
+            </div>
+          </div>
+          
+          <div *ngIf="sprintAnalyticsData.weeklyCompletion.length === 0" class="text-center py-20 text-brand-text-500 text-xs">
+            No weekly completions logged recently.
+          </div>
+        </div>
+      </div>
+
+      <!-- Month-by-Month -->
+      <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl p-5 flex flex-col h-[400px]">
+        <h3 class="text-sm font-bold text-brand-text-200 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+          <span class="material-icons text-brand-text-400 text-sm">equalizer</span>
+          Monthly Completion Trends
+        </h3>
+
+        <div class="overflow-y-auto flex-1 pr-1 divide-y divide-brand-dark-800/50" *ngIf="sprintAnalyticsData">
+          <div *ngFor="let m of sprintAnalyticsData.monthlyCompletion" class="py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="material-icons text-xs text-brand-text-400">date_range</span>
+              <span class="text-xs font-semibold text-brand-text-100">{{ getMonthName(m.month) }} {{ m.year }}</span>
+            </div>
+
+            <div class="flex items-center gap-4 flex-1 justify-end">
+              <div class="w-24 md:w-48 h-2 rounded bg-brand-dark-950 overflow-hidden">
+                <div class="bg-emerald-500 h-full rounded" [style.width.%]="Math.min(m.completedCount * 3, 100)"></div>
+              </div>
+              <span class="text-xs font-bold font-mono text-brand-text-200 w-10 text-right">{{ m.completedCount }} tickets</span>
+            </div>
+          </div>
+
+          <div *ngIf="sprintAnalyticsData.monthlyCompletion.length === 0" class="text-center py-20 text-brand-text-500 text-xs">
+            No monthly completions logged recently.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Year-by-Year Trends -->
+    <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl p-5">
+      <h3 class="text-sm font-bold text-brand-text-200 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+        <span class="material-icons text-brand-text-400 text-sm">calendar_today</span>
+        Yearly Overview Analysis
+      </h3>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" *ngIf="sprintAnalyticsData">
+        <div *ngFor="let y of sprintAnalyticsData.yearlyCompletion" class="p-4 bg-brand-dark-950 border border-brand-dark-850 rounded-xl flex items-center justify-between">
+          <div>
+            <span class="text-2xl font-bold font-mono text-brand-text-100">{{ y.year }}</span>
+            <span class="block text-[10px] text-brand-text-400 uppercase tracking-wider mt-0.5">Yearly Completed</span>
+          </div>
+          <div class="text-xl font-bold text-brand-primary font-mono">
+            {{ y.completedCount }} tickets
+          </div>
+        </div>
+        <div *ngIf="sprintAnalyticsData.yearlyCompletion.length === 0" class="col-span-3 text-center py-6 text-brand-text-500 text-xs">
+          No yearly ticket history available.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========== CREATE SPRINT MODAL ========== -->
+  <div *ngIf="showCreateModal" class="fixed inset-0 bg-brand-dark-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl w-full max-w-md overflow-hidden shadow-2xl animate-scaleUp">
+      <div class="flex items-center justify-between p-5 border-b border-brand-dark-800">
+        <h3 class="text-base font-bold text-brand-text-100 flex items-center gap-2">
+          <span class="material-icons text-amber-500">calendar_today</span>
+          Create New Sprint
+        </h3>
+        <button (click)="closeCreateModal()" class="text-brand-text-400 hover:text-brand-text-200 transition">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="p-5">
+        <form [formGroup]="sprintForm" (ngSubmit)="createSprint()" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-brand-text-300 mb-1.5">Sprint Name *</label>
+            <input type="text" formControlName="sprintName" class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-amber-500 focus:outline-none" placeholder="e.g. Sprint 1">
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-brand-text-300 mb-1.5">Start Date *</label>
+              <input type="date" formControlName="startDate" class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-amber-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-brand-text-300 mb-1.5">End Date *</label>
+              <input type="date" formControlName="endDate" class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-amber-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-3 border-t border-brand-dark-800">
+            <button type="button" (click)="closeCreateModal()" class="px-4 py-2 bg-brand-dark-800 hover:bg-brand-dark-700 text-brand-text-200 text-sm font-semibold rounded-lg transition">
+              Cancel
+            </button>
+            <button type="submit" [disabled]="sprintForm.invalid" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-brand-dark-950 text-sm font-bold rounded-lg transition">
+              Create Sprint
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== EDIT SPRINT MODAL ========== -->
+  <div *ngIf="showEditModal" class="fixed inset-0 bg-brand-dark-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl w-full max-w-md overflow-hidden shadow-2xl animate-scaleUp">
+      <div class="flex items-center justify-between p-5 border-b border-brand-dark-800">
+        <h3 class="text-base font-bold text-brand-text-100 flex items-center gap-2">
+          <span class="material-icons text-amber-500">edit</span>
+          Edit Sprint Details
+        </h3>
+        <button (click)="closeEditModal()" class="text-brand-text-400 hover:text-brand-text-200 transition">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="p-5">
+        <form [formGroup]="sprintForm" (ngSubmit)="updateSprint()" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-brand-text-300 mb-1.5">Sprint Name *</label>
+            <input type="text" formControlName="sprintName" class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-amber-500 focus:outline-none">
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-brand-text-300 mb-1.5">Start Date *</label>
+              <input type="date" formControlName="startDate" class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-amber-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-brand-text-300 mb-1.5">End Date *</label>
+              <input type="date" formControlName="endDate" class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-amber-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-3 border-t border-brand-dark-800">
+            <button type="button" (click)="closeEditModal()" class="px-4 py-2 bg-brand-dark-800 hover:bg-brand-dark-700 text-brand-text-200 text-sm font-semibold rounded-lg transition">
+              Cancel
+            </button>
+            <button type="submit" [disabled]="sprintForm.invalid" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-brand-dark-950 text-sm font-bold rounded-lg transition">
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== COMPLETE SPRINT MODAL ========== -->
+  <div *ngIf="showCompleteModal && completingSprint" class="fixed inset-0 bg-brand-dark-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl w-full max-w-md overflow-hidden shadow-2xl animate-scaleUp">
+      <div class="flex items-center justify-between p-5 border-b border-brand-dark-800">
+        <h3 class="text-base font-bold text-brand-text-100 flex items-center gap-2">
+          <span class="material-icons text-brand-primary">flag</span>
+          Complete Sprint
+        </h3>
+        <button (click)="closeCompleteModal()" class="text-brand-text-400 hover:text-brand-text-200 transition">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div class="p-3 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-xs text-brand-text-400">
+          <p>Completing <span class="text-brand-text-100 font-semibold">{{ completingSprint.sprintName }}</span>.</p>
+          <p class="mt-1">
+            <span class="text-emerald-400 font-semibold">{{ getCompletedTicketCount() }} issues</span> are Done.
+            <span class="text-amber-400 font-semibold"> {{ getIncompleteTicketCount() }} issues</span> are still open.
+          </p>
+        </div>
+
+        <!-- Rollover selection if there are incomplete tasks -->
+        <div *ngIf="getIncompleteTicketCount() > 0" class="space-y-3 bg-brand-dark-950/40 p-3 rounded-lg border border-brand-dark-800/80 animate-fadeIn text-xs">
+          <label class="block font-bold text-brand-text-200">Rollover Options for open tasks ({{ getIncompleteTicketCount() }}):</label>
+          
+          <div class="space-y-2">
+            <!-- Backlog -->
+            <label class="flex items-center gap-2 text-brand-text-300 cursor-pointer">
+              <input type="radio" name="rollover" value="backlog" [(ngModel)]="rolloverOption" class="rounded border-brand-dark-700 bg-brand-dark-950 text-amber-500 focus:ring-0 cursor-pointer">
+              <span>Move to Backlog</span>
+            </label>
+
+            <!-- New Sprint -->
+            <label class="flex items-center gap-2 text-brand-text-300 cursor-pointer">
+              <input type="radio" name="rollover" value="new-sprint" [(ngModel)]="rolloverOption" class="rounded border-brand-dark-700 bg-brand-dark-950 text-amber-500 focus:ring-0 cursor-pointer">
+              <span>Move to New Sprint</span>
+            </label>
+            <div *ngIf="rolloverOption === 'new-sprint'" class="pl-6 animate-fadeIn">
+              <input type="text" [(ngModel)]="rolloverNewSprintName" 
+                     class="w-full px-2.5 py-1.5 bg-brand-dark-950 border border-brand-dark-800 rounded text-xs text-brand-text-100 focus:border-amber-500 focus:outline-none" 
+                     placeholder="New Sprint Name">
+            </div>
+
+            <!-- Existing Future Sprint -->
+            <label class="flex items-center gap-2 text-brand-text-300 cursor-pointer" *ngIf="futureSprints.length > 0">
+              <input type="radio" name="rollover" value="future-sprint" [(ngModel)]="rolloverOption" class="rounded border-brand-dark-700 bg-brand-dark-950 text-amber-500 focus:ring-0 cursor-pointer">
+              <span>Move to Existing Future Sprint</span>
+            </label>
+            <div *ngIf="rolloverOption === 'future-sprint' && futureSprints.length > 0" class="pl-6 animate-fadeIn">
+              <select [(ngModel)]="rolloverSprintId" 
+                      class="w-full px-2 py-1 bg-brand-dark-950 border border-brand-dark-800 rounded text-xs text-brand-text-100 focus:border-amber-500 focus:outline-none">
+                <option [ngValue]="null">Select Future Sprint...</option>
+                <option *ngFor="let s of futureSprints" [value]="s.sprintId">{{ s.sprintName }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-brand-dark-800">
+          <button type="button" (click)="closeCompleteModal()" class="px-4 py-2 bg-brand-dark-800 hover:bg-brand-dark-700 text-brand-text-200 text-sm font-semibold rounded-lg transition">
+            Cancel
+          </button>
+          <button (click)="confirmCompleteSprint()" 
+                  [disabled]="rolloverOption === 'future-sprint' && !rolloverSprintId"
+                  class="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition flex items-center gap-2">
+            <span class="material-icons text-sm">flag</span>
+            Complete Sprint
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ========== TAB 3: Completed Sprints History ========== -->
+  <div *ngIf="activeTab === 'completed'" class="space-y-6 animate-fadeIn pb-12">
+    <div *ngIf="!completedSprintHistory?.length && !isLoading" class="flex flex-col items-center justify-center py-24 bg-brand-dark-900 border border-brand-dark-800 rounded-xl">
+      <div class="w-16 h-16 rounded-full bg-brand-dark-800 flex items-center justify-center mb-4 border border-brand-dark-700">
+        <span class="material-icons text-brand-text-400 text-3xl">history</span>
+      </div>
+      <h3 class="text-brand-text-100 font-semibold mb-1">No completed sprints</h3>
+      <p class="text-xs text-brand-text-400">Complete a sprint to see its history here.</p>
+    </div>
+
+    <!-- Completed Sprints List -->
+    <div class="space-y-4">
+      <div *ngFor="let h of completedSprintHistory" class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl overflow-hidden">
+        
+        <!-- Header (Click to expand) -->
+        <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-brand-dark-800/30 transition border-b border-brand-dark-800" (click)="toggleSprintPanel(h.sprint.sprintId!)">
+          <div class="flex items-center gap-3">
+            <span class="material-icons text-brand-text-400 transition-transform" [class.rotate-180]="!isSprintCollapsed(h.sprint.sprintId!)">expand_more</span>
+            <div>
+              <h3 class="font-bold text-sm text-brand-text-100 flex items-center gap-2">
+                {{ h.sprint.sprintName }}
+                <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[10px] font-semibold border border-blue-500/20 uppercase tracking-wider">Completed</span>
+              </h3>
+              <p class="text-[11px] text-brand-text-400 font-mono mt-1 flex items-center gap-2">
+                <span class="material-icons text-[12px]">calendar_today</span>
+                Started: {{ h.sprint.startDate | date:'MMM d, yyyy':'+0530' }} 
+                <span class="material-icons text-[10px] mx-1 text-brand-dark-600">arrow_forward</span>
+                Completed: {{ h.sprint.endDate | date:'MMM d, yyyy':'+0530' }}
+              </p>
+            </div>
+          </div>
+          
+          <div class="flex gap-2">
+            <div class="px-3 py-1.5 bg-brand-dark-950 border border-brand-dark-800 rounded-md text-center">
+              <div class="text-[10px] text-brand-text-400 uppercase tracking-wide">Total</div>
+              <div class="font-bold text-sm text-brand-text-100">{{ h.sprint.totalTicketsAtClose }}</div>
+            </div>
+            <div class="px-3 py-1.5 bg-brand-dark-950 border border-brand-dark-800 rounded-md text-center">
+              <div class="text-[10px] text-emerald-500 uppercase tracking-wide">Done</div>
+              <div class="font-bold text-sm text-emerald-400">{{ h.sprint.completedTicketsAtClose }}</div>
+            </div>
+            <div class="px-3 py-1.5 bg-brand-dark-950 border border-brand-dark-800 rounded-md text-center">
+              <div class="text-[10px] text-amber-500 uppercase tracking-wide">Rollover</div>
+              <div class="font-bold text-sm text-amber-400">{{ (h.sprint.totalTicketsAtClose || 0) - (h.sprint.completedTicketsAtClose || 0) - (h.sprint.onHoldTicketsAtClose || 0) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Body (Tickets) -->
+        <div *ngIf="!isSprintCollapsed(h.sprint.sprintId!)" class="p-4 bg-brand-dark-950/50">
+          <h4 class="text-xs font-semibold text-brand-text-300 mb-3 px-1 uppercase tracking-wider">Tickets at Completion</h4>
+          
+          <div class="overflow-x-auto rounded-lg border border-brand-dark-800">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-brand-dark-900 border-b border-brand-dark-800 text-brand-text-400 uppercase tracking-wider">
+                <tr>
+                  <th class="px-4 py-2 font-semibold">Ticket</th>
+                  <th class="px-4 py-2 font-semibold">Subject</th>
+                  <th class="px-4 py-2 font-semibold">Status at Close</th>
+                  <th class="px-4 py-2 font-semibold text-right">Rollover Destination</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-brand-dark-800 bg-brand-dark-900/50">
+                <tr *ngFor="let t of h.tickets" class="hover:bg-brand-dark-800/30 transition">
+                  <td (click)="goToTicket(t.ticketId)" class="px-4 py-2.5 font-mono text-brand-text-300 whitespace-nowrap cursor-pointer hover:text-amber-500 transition">{{ t.ticketNumber }}</td>
+                  <td (click)="goToTicket(t.ticketId)" class="px-4 py-2.5 text-brand-text-100 max-w-[300px] truncate cursor-pointer hover:text-amber-500 transition" [title]="t.subject">{{ t.subject }}</td>
+                  <td class="px-4 py-2.5 whitespace-nowrap">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold border"
+                          [class.bg-emerald-500/10]="['Closed', 'Close', 'Work Done'].includes(t.statusAtClose)"
+                          [class.text-emerald-500]="['Closed', 'Close', 'Work Done'].includes(t.statusAtClose)"
+                          [class.border-emerald-500/20]="['Closed', 'Close', 'Work Done'].includes(t.statusAtClose)"
+                          
+                          [class.bg-purple-500/10]="t.statusAtClose === 'On Hold'"
+                          [class.text-purple-500]="t.statusAtClose === 'On Hold'"
+                          [class.border-purple-500/20]="t.statusAtClose === 'On Hold'"
+                          
+                          [class.bg-amber-500/10]="!['Closed', 'Close', 'Work Done', 'On Hold'].includes(t.statusAtClose)"
+                          [class.text-amber-500]="!['Closed', 'Close', 'Work Done', 'On Hold'].includes(t.statusAtClose)"
+                          [class.border-amber-500/20]="!['Closed', 'Close', 'Work Done', 'On Hold'].includes(t.statusAtClose)">
+                      {{ t.statusAtClose }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-2.5 text-right whitespace-nowrap">
+                    <span *ngIf="['Closed', 'Close', 'Work Done', 'On Hold'].includes(t.statusAtClose)" class="text-emerald-500/70 text-[10px] font-mono flex items-center justify-end gap-1">
+                      <span class="material-icons text-[12px]">done_all</span> Not Rolled Over
+                    </span>
+                    <span *ngIf="!['Closed', 'Close', 'Work Done', 'On Hold'].includes(t.statusAtClose) && !t.rolledToSprintId" class="text-amber-500 text-[10px] font-mono flex items-center justify-end gap-1">
+                      <span class="material-icons text-[12px]">assignment_return</span> Sent to Backlog
+                    </span>
+                    <span *ngIf="!['Closed', 'Close', 'Work Done', 'On Hold'].includes(t.statusAtClose) && t.rolledToSprintId" class="text-blue-400 text-[10px] font-mono flex items-center justify-end gap-1">
+                      <span class="material-icons text-[12px]">forward</span> Rolled to: {{ t.rolledToSprintName }}
+                    </span>
+                  </td>
+                </tr>
+                <tr *ngIf="!h.tickets?.length">
+                  <td colspan="4" class="px-4 py-6 text-center text-brand-text-500 text-xs italic">No ticket history recorded for this sprint.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

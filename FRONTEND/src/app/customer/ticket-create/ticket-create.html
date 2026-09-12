@@ -1,0 +1,581 @@
+<div class="max-w-5xl mx-auto px-4 py-8 select-none">
+    
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-20">
+        <div class="w-8 h-8 rounded-full border-2 border-brand-primary/20 border-t-brand-primary animate-spin"></div>
+        <p class="text-brand-text-400 font-mono text-xs mt-3">Loading form data...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="errorMessage && !isLoading" class="flex flex-col items-center justify-center py-20 text-red-500">
+        <span class="material-icons text-5xl mb-4 opacity-50">warning</span>
+        <p class="text-sm font-semibold">{{ errorMessage }}</p>
+        <button class="mt-4 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-lg transition text-xs font-semibold" (click)="loadProductData(ticketForm.customerId)">Try Again</button>
+    </div>
+
+    <!-- Top Navigation Bar -->
+    <div *ngIf="!isLoading && !errorMessage" class="flex items-center justify-between mb-4">
+        <button type="button" 
+                (click)="goBack()" 
+                class="px-3.5 py-2 bg-brand-dark-900 border border-brand-dark-800 hover:bg-brand-dark-800 text-brand-text-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition shadow-sm">
+            <span class="material-icons text-sm">arrow_back</span>
+            Back to Dashboard
+        </button>
+    </div>
+
+    <!-- Main Form -->
+    <div *ngIf="!isLoading && !errorMessage" class="bg-brand-dark-900 border border-brand-dark-800 rounded-2xl shadow-xl overflow-hidden animate-slide-in">
+        
+        <!-- Header -->
+        <header class="px-8 py-6 border-b border-brand-dark-800 bg-brand-dark-950 flex flex-col items-center text-center relative">
+            <button type="button" 
+                    (click)="goBack()" 
+                    class="hidden sm:flex absolute left-6 top-6 px-3 py-1.5 bg-brand-dark-900 border border-brand-dark-800 hover:bg-brand-dark-800 text-brand-text-300 hover:text-white rounded-lg text-xs font-semibold items-center gap-1.5 transition">
+                <span class="material-icons text-sm">arrow_back</span>
+                Back
+            </button>
+            <div class="w-12 h-12 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-xl flex items-center justify-center text-white mb-3 shadow-lg -rotate-3 hover:rotate-0 transition duration-300">
+                <span class="material-icons">send</span>
+            </div>
+            <h1 class="text-2xl font-bold text-brand-text-100 tracking-tight">Create Support Ticket</h1>
+            <p class="text-xs text-brand-text-400 font-mono mt-1">Our support team will review and respond promptly.</p>
+        </header>
+
+        <!-- Child Ticket Banner (Commented out)
+        <div *ngIf="parentTicketNumber" class="mx-8 mt-6 p-4 bg-brand-secondary/10 border border-brand-secondary/30 rounded-lg flex items-center gap-3 text-sm text-brand-text-100">
+            <span class="material-icons text-brand-secondary text-lg">account_tree</span>
+            <span>Creating <strong>child ticket</strong> linked to parent: <code class="bg-brand-secondary/20 px-1.5 py-0.5 rounded text-brand-secondary font-mono">{{ parentTicketNumber }}</code></span>
+            <span class="ml-auto text-xs text-brand-text-400">Will be automatically linked</span>
+        </div>
+        -->
+
+        <form (ngSubmit)="onSubmit()" #form="ngForm" class="p-8 space-y-10">
+            
+            <!-- Section 1: Basic Info -->
+            <div class="space-y-5 relative">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-primary/20 text-brand-primary border border-brand-primary/30 text-xs font-bold">1</span>
+                    <h3 class="text-base font-semibold text-brand-text-100">Basic Information</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="col-span-1 md:col-span-2 flex flex-col gap-1.5">
+                        <label for="subject" class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                            Subject <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="subject" name="subject" [(ngModel)]="ticketForm.subject" placeholder="Brief summary of your issue"
+                            class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-primary transition"
+                            [class.border-red-500]="validationErrors['subject']" required>
+                        <div *ngIf="validationErrors['subject']" class="text-red-500 text-xs mt-1 flex items-center gap-1">
+                            <span class="material-icons text-[14px]">error</span> {{ validationErrors['subject'] }}
+                        </div>
+                    </div>
+
+                    <!-- Explicitly side-by-side Ticket Type and Source -->
+                    <div class="col-span-1 md:col-span-2 grid grid-cols-2 gap-6">
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex items-center justify-between">
+                                <label for="ticketType" class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                                    Ticket Type <span class="text-red-500">*</span>
+                                </label>
+                                <button type="button" class="text-[10px] text-brand-primary hover:text-brand-primary-hover font-semibold transition" (click)="openAddTypeDialog()">+ Add Custom</button>
+                            </div>
+                            <select id="ticketType" name="ticketType" [(ngModel)]="ticketForm.ticketType" 
+                                    class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-primary transition">
+                                <option value="" disabled>Select ticket type</option>
+                                <option *ngFor="let opt of ticketTypeOptions" [value]="opt.name">{{ opt.name }}</option>
+                            </select>
+                        </div>
+
+                        <!-- Ticket Source: hidden from customers (always WEB), shown to PM/Managers -->
+                        <div class="flex flex-col gap-1.5">
+                            <div *ngIf="isCustomerRole">
+                                <!-- Read-only WEB badge for customers -->
+                                <label class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                                    Ticket Source
+                                </label>
+                                <div class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-dark-950 border border-brand-dark-800 text-brand-text-400 text-sm">
+                                    <span class="material-icons text-[14px] text-brand-primary">language</span>
+                                    <span class="font-semibold text-brand-primary">WEB</span>
+                                    <span class="text-brand-text-500 text-xs ml-1">(auto-selected)</span>
+                                </div>
+                            </div>
+
+                            <div *ngIf="!isCustomerRole" class="flex flex-col gap-1.5">
+                                <div class="flex items-center justify-between">
+                                    <label for="ticketSource" class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                                        Ticket Source
+                                    </label>
+                                    <button type="button" class="text-[10px] text-brand-primary hover:text-brand-primary-hover font-semibold transition" (click)="openAddSourceDialog()">+ Add Custom</button>
+                                </div>
+                                <select id="ticketSource" name="ticketSource" [(ngModel)]="ticketForm.ticketSource" 
+                                        class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-primary transition">
+                                    <option value="">Select ticket source</option>
+                                    <option *ngFor="let opt of ticketSourceOptions" [value]="opt.name">{{ opt.name }}</option>
+                                </select>
+
+                                <!-- Phone number input shown when source = Phone -->
+                                <div *ngIf="ticketForm.ticketSource === 'Phone'" class="flex flex-col gap-1 mt-1 animate-fade-in">
+                                    <label class="text-[11px] text-brand-text-400 uppercase tracking-widest">Phone Number</label>
+                                    <input type="tel" id="sourcePhone" name="sourcePhone"
+                                           [(ngModel)]="sourcePhone"
+                                           placeholder="+91 9876543210"
+                                           class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2 focus:outline-none focus:border-brand-primary transition">
+                                </div>
+
+                                <!-- Email input shown when source = Email (updates also go to this address) -->
+                                <div *ngIf="ticketForm.ticketSource === 'Email'" class="flex flex-col gap-1 mt-1 animate-fade-in">
+                                    <label class="text-[11px] text-brand-text-400 uppercase tracking-widest">Source Emails <span class="text-brand-primary/70 normal-case font-normal">— ticket updates will be sent to all addresses (comma-separated)</span></label>
+                                    <input type="email" id="sourceEmail" name="sourceEmail" multiple
+                                           [(ngModel)]="sourceEmail"
+                                           placeholder="email1@example.com, email2@example.com"
+                                           class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2 focus:outline-none focus:border-brand-primary transition">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label for="docketNumber" class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                            Docket Number <span class="opacity-50">(Optional)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="docketNumber" name="docketNumber" 
+                                [(ngModel)]="searchDocketText" 
+                                (input)="onDocketInput()"
+                                (focus)="isDocketDropdownOpen = true"
+                                (blur)="closeDocketDropdown()"
+                                placeholder="Type or select a docket..."
+                                autocomplete="off"
+                                class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-secondary transition">
+                            
+                            <!-- Custom Dropdown Menu -->
+                            <div *ngIf="isDocketDropdownOpen && filteredDockets.length > 0" 
+                                 class="absolute z-50 w-full mt-1 bg-brand-dark-900 border border-brand-dark-800 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+                                <div *ngFor="let doc of filteredDockets" 
+                                     (mousedown)="selectDocket(doc.docketNo || doc.DocketNo)"
+                                     class="px-4 py-2 text-sm text-brand-text-200 hover:bg-brand-secondary hover:text-white cursor-pointer transition">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <span class="truncate">{{ doc.docketNo || doc.DocketNo }}</span>
+                                        <span *ngIf="(doc.status || doc.DocketStatus || doc.Status) as docketStatus"
+                                              class="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-brand-dark-700 text-brand-text-300 bg-brand-dark-950">
+                                            {{ docketStatus }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div *ngIf="isDocketDropdownOpen && filteredDockets.length === 0" 
+                                 class="absolute z-50 w-full mt-1 bg-brand-dark-900 border border-brand-dark-800 rounded-lg shadow-xl p-4 text-center text-sm text-brand-text-400">
+                                No dockets found
+                            </div>
+                        </div>
+                        <div *ngIf="ticketForm.docketNumber" class="text-[11px] text-brand-text-400 font-mono mt-1 flex items-center gap-2">
+                            <span class="text-brand-text-500">Current status:</span>
+                            <span class="px-2 py-0.5 rounded-full border border-brand-primary/20 bg-brand-primary/10 text-brand-primary">
+                                {{ getDocketStatusLabel(selectedDocketStatus) }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label for="priority" class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                            Priority <span class="text-red-500">*</span>
+                        </label>
+                        <select id="priority" name="priority" [(ngModel)]="ticketForm.priority" (change)="onPriorityChange(ticketForm.priority)"
+                                class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-primary transition">
+                            <option value="" disabled>Select priority level</option>
+                            <option *ngFor="let p of priorityOptions" [value]="p.name">{{ p.name }}</option>
+                        </select>
+                    </div>
+
+                    <!-- PM Assignments & Difficulty -->
+                    <div *ngIf="createdByPmId" class="col-span-1 md:col-span-2 flex flex-col gap-4 p-4 rounded-xl border border-brand-secondary/30 bg-brand-secondary/5 mt-2">
+                        
+                        <div class="flex flex-col gap-1.5 relative">
+                            <div class="flex items-center justify-between">
+                                <label for="assignedTo" class="text-xs font-semibold text-brand-secondary flex items-center gap-1.5 uppercase tracking-widest">
+                                    <span class="material-icons text-[14px]">person</span> Assigned To (Executive)
+                                </label>
+                            </div>
+                            <div class="relative">
+                                <input type="text" 
+                                       [(ngModel)]="assigneeSearchQuery"
+                                       [ngModelOptions]="{standalone: true}"
+                                       (focus)="showAssigneeDropdown = true; filterAssignees()"
+                                       (blur)="onAssigneeBlur()"
+                                       (input)="onAssigneeSearchInput()"
+                                       class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-secondary transition cursor-text"
+                                       placeholder="Search and select an Executive...">
+                                <span class="material-icons absolute right-3 top-1/2 -translate-y-1/2 text-brand-text-400 pointer-events-none text-sm">
+                                    {{ showAssigneeDropdown ? 'expand_less' : 'expand_more' }}
+                                </span>
+
+                                <!-- Dropdown list -->
+                                <div *ngIf="showAssigneeDropdown" 
+                                     class="absolute left-0 right-0 mt-1 bg-brand-dark-900 border border-brand-dark-800 rounded-lg shadow-xl max-h-48 overflow-y-auto z-50 custom-scrollbar">
+                                    <div (mousedown)="selectAssignee({ id: undefined, name: 'Unassigned' })"
+                                         class="px-4 py-2 text-xs text-brand-text-400 hover:bg-brand-dark-800 cursor-pointer transition italic">
+                                        Unassigned
+                                    </div>
+                                    <div *ngFor="let a of filteredAssignees" 
+                                         (mousedown)="selectAssignee(a)"
+                                         class="px-4 py-2 text-xs text-brand-text-100 hover:bg-brand-dark-800 cursor-pointer transition flex flex-col gap-0.5">
+                                        <span>{{ a.name }}</span>
+                                    </div>
+                                    <div *ngIf="filteredAssignees.length === 0" 
+                                         class="px-4 py-2 text-xs text-brand-text-400 text-center">
+                                        No executives found
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+                
+                <!-- Divider line -->
+                <div class="absolute -bottom-6 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-dark-800 to-transparent"></div>
+            </div>
+
+            <!-- Section 2: Product Routing (Hidden for Customer role: product auto-selected in background) -->
+            <div class="space-y-5 relative mt-12" *ngIf="!isCustomerRole">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-primary/20 text-brand-primary border border-brand-primary/30 text-xs font-bold">2</span>
+                    <h3 class="text-base font-semibold text-brand-text-100">Routing & Category</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="col-span-1 md:col-span-2 flex flex-col gap-2" *ngIf="!isCustomerRole">
+                        <label for="customerSearch" class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                            Customer <span class="text-red-500">*</span>
+                        </label>
+
+                        <!-- Searchable Input with Dropdown -->
+                        <div class="relative">
+                            <input type="text" id="customerSearch" name="customerSearch"
+                                   [(ngModel)]="customerSearchQuery"
+                                   (input)="onCustomerSearchInput()"
+                                   (focus)="isCustomerDropdownOpen = true; filterCustomers()"
+                                   (click)="isCustomerDropdownOpen = true; filterCustomers()"
+                                   (blur)="closeCustomerDropdown()"
+                                   placeholder="Type customer code or name to search..."
+                                   autocomplete="off"
+                                   class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-primary transition pr-10">
+                            <span (mousedown)="isCustomerDropdownOpen = !isCustomerDropdownOpen; filterCustomers()" class="material-icons absolute right-3 top-1/2 -translate-y-1/2 text-brand-text-400 cursor-pointer text-sm">
+                                {{ isCustomerDropdownOpen ? 'expand_less' : 'expand_more' }}
+                            </span>
+
+                            <!-- Dropdown Menu -->
+                            <div *ngIf="isCustomerDropdownOpen"
+                                 class="absolute z-50 left-0 right-0 mt-1 bg-brand-dark-900 border border-brand-dark-800 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+                                
+                                <div *ngFor="let cust of filteredCustomers"
+                                     (mousedown)="selectCustomer(cust)"
+                                     class="px-4 py-2.5 text-sm text-brand-text-200 hover:bg-brand-primary hover:text-white cursor-pointer transition flex items-center justify-between border-b border-brand-dark-800/50 last:border-0">
+                                    <div class="flex items-center gap-2 overflow-hidden">
+                                        <span class="font-mono text-xs text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded border border-brand-primary/20">
+                                            {{ cust.userNumber }}
+                                        </span>
+                                        <span class="truncate font-medium">{{ cust.fullName }}</span>
+                                    </div>
+                                    <span *ngIf="cust.id === ticketForm.customerId" class="material-icons text-brand-primary text-sm ml-2">check_circle</span>
+                                </div>
+
+                                <div *ngIf="filteredCustomers.length === 0"
+                                     class="px-4 py-4 text-center text-xs text-brand-text-400">
+                                    No customers found.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-span-1 md:col-span-2 flex flex-col gap-1.5">
+                        <label for="product" class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                            Product <span class="text-red-500">*</span>
+                            <span *ngIf="isProductsLoading" class="material-icons text-[14px] animate-spin text-brand-primary">autorenew</span>
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="product" name="product"
+                                [(ngModel)]="searchProductText"
+                                (input)="onProductInput()"
+                                (focus)="isProductDropdownOpen = true; filterProducts()"
+                                (blur)="closeProductDropdown()"
+                                placeholder="Type or select a product..."
+                                autocomplete="off"
+                                [disabled]="isProductsLoading"
+                                class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-primary transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                [class.border-red-500]="validationErrors['productId']">
+                            
+                            <!-- Custom Dropdown Menu -->
+                            <div *ngIf="isProductDropdownOpen && filteredProducts.length > 0" 
+                                 class="absolute z-50 w-full mt-1 bg-brand-dark-900 border border-brand-dark-800 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+                                <div *ngFor="let prod of filteredProducts" 
+                                     (mousedown)="selectProduct(prod)"
+                                     class="px-4 py-2 text-sm text-brand-text-200 hover:bg-brand-primary hover:text-white cursor-pointer transition">
+                                    <span class="truncate">{{ prod.name }}</span>
+                                </div>
+                            </div>
+                            <div *ngIf="isProductDropdownOpen && filteredProducts.length === 0" 
+                                 class="absolute z-50 w-full mt-1 bg-brand-dark-900 border border-brand-dark-800 rounded-lg shadow-xl p-4 text-center text-sm text-brand-text-400">
+                                No products found. Keep typing to create on-the-fly.
+                            </div>
+                        </div>
+                        <div *ngIf="validationErrors['productId']" class="text-red-500 text-xs mt-1 flex items-center gap-1">
+                            <span class="material-icons text-[14px]">error</span> {{ validationErrors['productId'] }}
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label for="module" class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                            Module <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="module" name="module"
+                                [(ngModel)]="searchModuleText"
+                                (input)="onModuleInput()"
+                                (focus)="isModuleDropdownOpen = true; filterModules()"
+                                (blur)="closeModuleDropdown()"
+                                placeholder="Type or select a module..."
+                                autocomplete="off"
+                                [disabled]="!searchProductText"
+                                class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-primary transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            
+                            <!-- Custom Dropdown Menu -->
+                            <div *ngIf="isModuleDropdownOpen && filteredModules.length > 0" 
+                                 class="absolute z-50 w-full mt-1 bg-brand-dark-900 border border-brand-dark-800 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+                                <div *ngFor="let mod of filteredModules" 
+                                     (mousedown)="selectModule(mod)"
+                                     class="px-4 py-2 text-sm text-brand-text-200 hover:bg-brand-primary hover:text-white cursor-pointer transition">
+                                    <span class="truncate">{{ mod.name }}</span>
+                                </div>
+                            </div>
+                            <div *ngIf="isModuleDropdownOpen && filteredModules.length === 0" 
+                                 class="absolute z-50 w-full mt-1 bg-brand-dark-900 border border-brand-dark-800 rounded-lg shadow-xl p-4 text-center text-sm text-brand-text-400">
+                                No modules found. Keep typing to create on-the-fly.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label for="subModule" class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                            Sub-Module <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="subModule" name="subModule"
+                                [(ngModel)]="searchSubModuleText"
+                                (input)="onSubModuleInput()"
+                                (focus)="isSubModuleDropdownOpen = true; filterSubModules()"
+                                (blur)="closeSubModuleDropdown()"
+                                placeholder="Type or select a sub-module..."
+                                autocomplete="off"
+                                [disabled]="!searchModuleText"
+                                class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-primary transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            
+                            <!-- Custom Dropdown Menu -->
+                            <div *ngIf="isSubModuleDropdownOpen && filteredSubModules.length > 0" 
+                                 class="absolute z-50 w-full mt-1 bg-brand-dark-900 border border-brand-dark-800 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+                                <div *ngFor="let sm of filteredSubModules" 
+                                     (mousedown)="selectSubModule(sm)"
+                                     class="px-4 py-2 text-sm text-brand-text-200 hover:bg-brand-primary hover:text-white cursor-pointer transition">
+                                    <span class="truncate">{{ sm.name }}</span>
+                                </div>
+                            </div>
+                            <div *ngIf="isSubModuleDropdownOpen && filteredSubModules.length === 0" 
+                                 class="absolute z-50 w-full mt-1 bg-brand-dark-900 border border-brand-dark-800 rounded-lg shadow-xl p-4 text-center text-sm text-brand-text-400">
+                                No sub-modules found. Keep typing to create on-the-fly.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider line -->
+                <div class="absolute -bottom-6 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-dark-800 to-transparent"></div>
+            </div>
+
+            <!-- Section 3: Description -->
+            <div class="space-y-5 mt-12">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-primary/20 text-brand-primary border border-brand-primary/30 text-xs font-bold">3</span>
+                    <h3 class="text-base font-semibold text-brand-text-100">Description & Evidence</h3>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label for="description" class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                        Detailed Description <span class="text-red-500">*</span>
+                    </label>
+                    <div class="border border-brand-dark-800 rounded-lg overflow-hidden bg-brand-dark-950 transition focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/10">
+                        <div class="flex items-center gap-1 px-3 py-2 border-b border-brand-dark-800 bg-brand-dark-900">
+                            <button type="button" class="w-7 h-7 flex items-center justify-center rounded text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition" [class.bg-brand-primary/20]="isFormatActive('bold')" [class.text-brand-primary]="isFormatActive('bold')" (click)="formatText('bold')"><span class="material-icons text-[16px]">format_bold</span></button>
+                            <button type="button" class="w-7 h-7 flex items-center justify-center rounded text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition" [class.bg-brand-primary/20]="isFormatActive('italic')" [class.text-brand-primary]="isFormatActive('italic')" (click)="formatText('italic')"><span class="material-icons text-[16px]">format_italic</span></button>
+                            <button type="button" class="w-7 h-7 flex items-center justify-center rounded text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition" [class.bg-brand-primary/20]="isFormatActive('underline')" [class.text-brand-primary]="isFormatActive('underline')" (click)="formatText('underline')"><span class="material-icons text-[16px]">format_underlined</span></button>
+                            <div class="w-px h-4 bg-brand-dark-800 mx-1"></div>
+                            <button type="button" class="w-7 h-7 flex items-center justify-center rounded text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition" [class.bg-brand-primary/20]="isFormatActive('insertUnorderedList')" [class.text-brand-primary]="isFormatActive('insertUnorderedList')" (click)="formatText('insertUnorderedList')"><span class="material-icons text-[16px]">format_list_bulleted</span></button>
+                            <button type="button" class="w-7 h-7 flex items-center justify-center rounded text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition" [class.bg-brand-primary/20]="isFormatActive('insertOrderedList')" [class.text-brand-primary]="isFormatActive('insertOrderedList')" (click)="formatText('insertOrderedList')"><span class="material-icons text-[16px]">format_list_numbered</span></button>
+                        </div>
+                        <div class="p-4 min-h-[150px] text-brand-text-100 text-sm outline-none"
+                             contenteditable="true"
+                             #descriptionEditor
+                             (input)="onDescriptionInput($event)"
+                             (keydown)="onKeyDown($event)"
+                             (blur)="onDescriptionBlur()"
+                             (focus)="onDescriptionFocus()"
+                             placeholder="Provide clear steps to reproduce, what you expected, and what actually happened..."
+                             [innerHTML]="ticketForm.description">
+                        </div>
+                    </div>
+                    <div *ngIf="validationErrors['description']" class="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <span class="material-icons text-[14px]">error</span> {{ validationErrors['description'] }}
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1.5 mt-6">
+                    <label class="text-xs font-semibold text-brand-text-400 flex items-center gap-1.5 uppercase tracking-widest">
+                        <span class="material-icons text-[14px]">cloud_upload</span> Upload Files (Optional)
+                    </label>
+                    
+                    <div class="relative w-full border-2 border-dashed border-brand-dark-800 hover:border-brand-primary/50 rounded-xl bg-brand-dark-950 hover:bg-brand-dark-900/50 transition cursor-pointer p-6 flex flex-col items-center justify-center text-center">
+                        <input type="file" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" (change)="onFileSelect($event)" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.txt,.xlsx,.xls">
+                        <span class="material-icons text-brand-text-500 text-3xl mb-2">upload_file</span>
+                        <p class="text-sm font-semibold text-brand-text-100">Click to upload or drag and drop</p>
+                        <p class="text-[10px] text-brand-text-500 font-mono mt-1">PDF, Images, Docs up to 5MB</p>
+                    </div>
+
+                    <div *ngIf="selectedFiles.length > 0" class="mt-3 space-y-2">
+                        <div *ngFor="let file of selectedFiles" class="flex items-center justify-between p-3 rounded-lg border border-brand-dark-800 bg-brand-dark-950">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <span class="material-icons text-brand-primary text-xl">insert_drive_file</span>
+                                <div class="flex flex-col min-w-0">
+                                    <span class="text-xs font-medium text-brand-text-100 truncate">{{ file.name }}</span>
+                                    <span class="text-[10px] text-brand-text-500 font-mono">{{ (file.size / 1024).toFixed(1) }} KB</span>
+                                </div>
+                            </div>
+                            <button type="button" class="text-brand-text-500 hover:text-red-500 p-1 rounded transition" (click)="onFileRemove(file.name)">
+                                <span class="material-icons text-sm">close</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PM Options (if applicable) -->
+            <div *ngIf="createdByPmId" class="p-6 rounded-xl border border-brand-secondary/20 bg-gradient-to-br from-brand-secondary/5 to-transparent mt-8">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="material-icons text-brand-secondary">admin_panel_settings</span>
+                    <h3 class="text-sm font-bold text-brand-secondary uppercase tracking-widest">PM Internal Options</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Assigned To moved above Difficulty -->
+                <!-- PM Options (deadline) hidden from customer role -->
+                <div *ngIf="createdByPmId && !isCustomerRole" class="flex flex-col gap-1.5 md:col-span-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-semibold text-brand-text-400">Deadline</label>
+                        <span *ngIf="calculatedTatHours" class="text-xs font-semibold text-brand-secondary">
+                            TAT: {{ calculatedTatHours }}
+                        </span>
+                    </div>
+                    <div class="relative flex items-center">
+                        <input type="datetime-local" name="deadline" [(ngModel)]="ticketForm.deadline" 
+                               [disabled]="true"
+                               class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-secondary transition z-10 bg-transparent opacity-60 cursor-not-allowed pointer-events-none"
+                               style="color-scheme: dark;">
+                        <span class="material-icons absolute right-3 text-brand-text-400 pointer-events-none z-0">calendar_today</span>
+                        <style>
+                            input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+                                    background: transparent;
+                                    bottom: 0;
+                                    color: transparent;
+                                    cursor: pointer;
+                                    height: auto;
+                                    left: 0;
+                                    position: absolute;
+                                    right: 0;
+                                    top: 0;
+                                    width: auto;
+                                }
+                            </style>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex items-center justify-between pt-6 border-t border-brand-dark-800 mt-10">
+                <button type="button" class="px-5 py-2.5 bg-transparent border border-brand-dark-800 hover:bg-brand-dark-800 text-brand-text-300 hover:text-white rounded-lg text-sm font-semibold transition" (click)="goBack()">
+                    Cancel
+                </button>
+                <button type="submit" [disabled]="isSubmitting" 
+                        class="px-6 py-2.5 bg-brand-primary hover:bg-brand-primary-hover disabled:bg-brand-dark-800 disabled:text-brand-text-500 disabled:cursor-not-allowed text-white rounded-lg text-sm font-bold transition flex items-center gap-2 shadow-lg shadow-brand-primary/20">
+                    <span *ngIf="!isSubmitting" class="material-icons text-[18px]">send</span>
+                    <span *ngIf="!isSubmitting">Submit Ticket</span>
+                    <span *ngIf="isSubmitting" class="material-icons text-[18px] animate-spin">autorenew</span>
+                    <span *ngIf="isSubmitting">Submitting...</span>
+                </button>
+            </div>
+            
+        </form>
+    </div>
+
+    <!-- Add Custom Ticket Type Dialog -->
+    <div *ngIf="showAddTypeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" (click)="closeAddTypeDialog()">
+        <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up" (click)="$event.stopPropagation()">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-brand-dark-800 bg-brand-dark-950">
+                <div class="flex items-center gap-3">
+                    <span class="material-icons text-brand-primary">local_offer</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-brand-text-100">Add Custom Type</h3>
+                        <p class="text-[10px] text-brand-text-500 font-mono">Create classification on the fly</p>
+                    </div>
+                </div>
+                <button type="button" class="text-brand-text-500 hover:text-white transition" (click)="closeAddTypeDialog()">
+                    <span class="material-icons text-sm">close</span>
+                </button>
+            </div>
+            <div class="p-5">
+                <div class="flex flex-col gap-1.5 mb-5">
+                    <label for="newTypeName" class="text-xs font-semibold text-brand-text-400">Ticket Type Name <span class="text-red-500">*</span></label>
+                    <input type="text" id="newTypeName" [(ngModel)]="newTypeName" placeholder="e.g. Security, Refactoring..." 
+                           class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-primary transition"
+                           (keydown.enter)="addCustomTicketType()" autofocus>
+                </div>
+                <div class="flex items-center justify-end gap-3">
+                    <button type="button" class="px-4 py-2 text-xs font-semibold text-brand-text-300 hover:text-white transition" (click)="closeAddTypeDialog()">Cancel</button>
+                    <button type="button" class="px-4 py-2 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition" [disabled]="!newTypeName.trim()" (click)="addCustomTicketType()">
+                        Add & Select
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Custom Ticket Source Dialog -->
+    <div *ngIf="showAddSourceModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" (click)="closeAddSourceDialog()">
+        <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up" (click)="$event.stopPropagation()">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-brand-dark-800 bg-brand-dark-950">
+                <div class="flex items-center gap-3">
+                    <span class="material-icons text-brand-primary">source</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-brand-text-100">Add Custom Source</h3>
+                        <p class="text-[10px] text-brand-text-500 font-mono">Create new source</p>
+                    </div>
+                </div>
+                <button type="button" class="text-brand-text-500 hover:text-white transition" (click)="closeAddSourceDialog()">
+                    <span class="material-icons text-sm">close</span>
+                </button>
+            </div>
+            <div class="p-5">
+                <div class="flex flex-col gap-1.5 mb-5">
+                    <label for="newSourceName" class="text-xs font-semibold text-brand-text-400">Ticket Source Name <span class="text-red-500">*</span></label>
+                    <input type="text" id="newSourceName" [(ngModel)]="newSourceName" placeholder="e.g. Chat, In-person..." 
+                           class="w-full bg-brand-dark-950 border border-brand-dark-800 text-brand-text-100 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-brand-primary transition"
+                           (keydown.enter)="addCustomTicketSource()" autofocus>
+                </div>
+                <div class="flex items-center justify-end gap-3">
+                    <button type="button" class="px-4 py-2 text-xs font-semibold text-brand-text-300 hover:text-white transition" (click)="closeAddSourceDialog()">Cancel</button>
+                    <button type="button" class="px-4 py-2 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition" [disabled]="!newSourceName.trim()" (click)="addCustomTicketSource()">
+                        Add & Select
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

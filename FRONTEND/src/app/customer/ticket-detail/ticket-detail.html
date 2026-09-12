@@ -1,0 +1,1000 @@
+<div class="ticket-detail-container">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading Ticket Details...</p>
+  </div>
+
+  <!-- Messages -->
+  <div *ngIf="successMessage && !isLoading" class="success-message">
+    <p>{{ successMessage }}</p>
+  </div>
+  <div *ngIf="errorMessage && !isLoading" class="error-message">
+    <p>{{ errorMessage }}</p>
+    <button class="back-button" (click)="goBack()">Go Back</button>
+  </div>
+
+  <!-- Plane.so Sleek Borderless Issue Details Content -->
+  <div *ngIf="ticket && !isLoading" class="content-wrapper">
+
+    <!-- Top breadcrumb & back bar -->
+    <header class="plane-top-bar">
+      <div class="bar-left">
+        <button class="back-link-btn" (click)="goBack()">
+          <span class="material-icons">arrow_back</span>
+          <span>Back to Issues</span>
+        </button>
+        <span class="bar-separator">/</span>
+        <span class="bar-project">{{ productName }}</span>
+        <!-- Dynamic parent chain breadcrumb -->
+        <ng-container *ngIf="relations.parent">
+          <span class="bar-separator">/</span>
+          <button class="bar-parent-link" (click)="navigateToRelated(relations.parent.id)"
+            [title]="relations.parent.subject">
+            📎 {{ relations.parent.ticketNumber }}
+          </button>
+        </ng-container>
+        <span class="bar-separator">/</span>
+        <span class="bar-issue-id">{{ ticket.ticketNumber || ('TKT-' + ticket.id) }}</span>
+        <!-- Child badge: shows if this ticket has children -->
+        <span class="bar-child-badge" *ngIf="relations.children.length > 0"
+          [title]="closedChildrenCount + '/' + relations.children.length + ' children closed'">
+          {{ closedChildrenCount }}/{{ relations.children.length }} ✓
+        </span>
+      </div>
+      <div class="bar-right" style="display: flex; align-items: center; gap: 12px;">
+        <div *ngIf="ticket.rating" class="header-rating-badge"
+          style="display: flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.25); color: #eab308; font-size: 12px; font-weight: 600;">
+          <span class="material-icons" style="font-size: 14px; vertical-align: middle;">star</span>
+          <span style="vertical-align: middle;">Rating: {{ ticket.rating }}/5</span>
+        </div>
+        <span class="issue-date">Created on {{ ticket.createdOn | date:'dd MMM yyyy':'+0530' }}</span>
+      </div>
+    </header>
+
+    <!-- Main Workspace Layout Grid -->
+    <div class="details-grid">
+
+      <!-- LEFT: Primary Content Area (Title, Description, Attachments, Activity Stream) -->
+      <section class="main-details">
+
+        <!-- Editable-style Title Header -->
+        <div class="issue-title-block">
+          <span class="issue-prefix-id">{{ ticket.ticketNumber || ('TKT-' + ticket.id) }}</span>
+
+          <div class="title-edit-container">
+            <h1>{{ ticket.subject }}</h1>
+          </div>
+        </div>
+
+        <!-- Meta Client & Product Path -->
+        <div class="issue-meta-info-row">
+          <span class="meta-info-item">
+            <span class="material-icons">corporate_fare</span>
+            <span>{{ customerName }}</span>
+          </span>
+          <span class="meta-info-separator">•</span>
+          <span class="meta-info-item">
+            <span class="material-icons">category</span>
+            <span>{{ productName }}</span>
+          </span>
+          <span class="meta-info-separator">•</span>
+          <span class="meta-info-item">
+            <span class="material-icons">event</span>
+            <span>{{ ticket.createdOn | date:'dd-MMM-yyyy h:mm a':'+0530' }}</span>
+          </span>
+          <ng-container *ngIf="ticket.docketNumber">
+            <span class="meta-info-separator">•</span>
+            <span class="meta-info-item cursor-pointer text-brand-primary font-semibold flex items-center gap-1" (click)="viewDocketDetails(ticket.docketNumber)" title="Click to view live docket tracking details">
+              <span class="material-icons text-sm">local_shipping</span>
+              <span>Docket: {{ ticket.docketNumber }}</span>
+            </span>
+          </ng-container>
+        </div>
+
+        <!-- Description Section -->
+        <div class="plane-issue-section">
+          <h2 class="section-title">Description</h2>
+          <div class="issue-description-box">
+            <p style="white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; word-wrap: break-word; max-width: 100%;">{{ ticket.description || 'No description provided.' }}</p>
+          </div>
+        </div>
+
+        <!-- Inline File Attachments Row (Borderless Tags) -->
+        <div class="plane-issue-section" *ngIf="ticket.attachments && ticket.attachments.length > 0">
+          <h2 class="section-title">Attachments ({{ ticket.attachments.length }})</h2>
+          <div class="plane-attachments-pills">
+            <div *ngFor="let att of ticket.attachments" class="attachment-pill">
+              <span class="material-icons pill-icon">attach_file</span>
+              <span class="pill-name" [title]="att.fileName">{{ att.fileName }}</span>
+              <button class="pill-download" (click)="downloadAttachment(att)" title="Download file">
+                <span class="material-icons">download</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plane.so Sleek Tabbed Workspace Feed (Chronological Streams) -->
+        <div class="plane-workspace-tabs-container">
+          <div class="workspace-tabs-header">
+            <!-- 1. Customer Chat Tab (Customer-Team Chatting - Shared with Customer) -->
+            <button class="ws-tab-btn" [class.active]="activeTab === 'customerChat'" (click)="selectTab('customerChat')">
+              <span class="material-icons">forum</span>
+              <span>Customer Chat ({{ customerNotes.length }})</span>
+            </button>
+
+            <!-- 2. Internal Team Notes Tab (Private to Internal Staff: !isCustomer) -->
+            <button *ngIf="!isCustomer" class="ws-tab-btn" [class.active]="activeTab === 'globalNotes'" (click)="selectTab('globalNotes')">
+              <span class="material-icons">lock</span>
+              <span>Internal Notes ({{ globalNotes.length }})</span>
+            </button>
+
+            <!-- 3. History Tab -->
+            <button class="ws-tab-btn" [class.active]="activeTab === 'timeline'"
+              (click)="selectTab('timeline')">
+              <span class="material-icons">history</span>
+              <span>History</span>
+            </button>
+            <!-- <button class="ws-tab-btn" [class.active]="activeTab === 'relations'" (click)="selectTab('relations')">
+              <span class="material-icons">hub</span>
+              <span>Relations Map ({{ relations.children.length + (relations.parent ? 1 : 0) }})</span>
+            </button> -->
+          </div>
+
+          <!-- Feed Content Box -->
+          <div class="workspace-feed-content">
+            <div *ngIf="commsErrorMessage && !isLoadingComms" class="error-message">
+              {{ commsErrorMessage }}
+            </div>
+
+            <!-- TAB 1: CUSTOMER-TEAM CHAT FEED -->
+            <div *ngIf="activeTab === 'customerChat' && !isLoadingComms" class="ws-feed-pane">
+              <div class="chat-thread">
+                <div *ngIf="customerNotes.length === 0" class="no-comments">
+                  <span class="material-icons">forum</span>
+                  <p>No customer messages yet. Start the conversation below!</p>
+                </div>
+
+                <div *ngFor="let msg of customerNotes" class="chat-bubble"
+                  [class.bubble-right]="msg.postedByUserId === currentUser.id"
+                  [class.bubble-left]="msg.postedByUserId !== currentUser.id">
+                  <div class="bubble-avatar" [class.avatar-customer]="msg.postedByUserRole === 'Customer'">
+                    {{ (msg.postedByName || '?').charAt(0).toUpperCase() }}
+                  </div>
+                  <div class="bubble-body">
+                    <div class="bubble-meta">
+                      <span class="bubble-author">
+                        {{ msg.postedByName }} 
+                        <span class="role-badge" [class.badge-customer]="msg.postedByUserRole === 'Customer'">{{ msg.postedByUserRole }}</span>
+                      </span>
+                      <span class="bubble-time">{{ msg.postedOn | date:'dd MMM yyyy, h:mm a':'+0530' }}</span>
+                    </div>
+                    <div class="bubble-text">{{ msg.commentText }}</div>
+
+                    <!-- Comment Attachments -->
+                    <div *ngIf="msg.attachments && msg.attachments.length > 0" class="bubble-attachments-pills">
+                      <a *ngFor="let att of msg.attachments" (click)="downloadAttachment(att, msg.id)"
+                        class="attachment-pill-mini">
+                        <span class="material-icons">insert_drive_file</span>
+                        <span>{{ att.fileName }}</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bottom Chat Composer for Customer-Team Chat -->
+              <div class="chat-input-bar">
+                <form [formGroup]="newCommentForm" (ngSubmit)="postComment('Customer')">
+                  <div class="chat-input-row">
+                    <textarea formControlName="commentText" class="chat-textarea"
+                      [placeholder]="isCustomer ? 'Type your message or query for the support team...' : 'Reply to customer...'" rows="2"
+                      (keydown)="onCommentKeyDown($event, 'Customer')">
+                    </textarea>
+
+                    <div class="chat-actions">
+                      <label for="commFilesCustomer" class="attach-label" title="Attach file(s)">
+                        <span class="material-icons">attach_file</span>
+                        <input type="file" id="commFilesCustomer" multiple (change)="onFileSelected($event)"
+                          style="display: none;">
+                      </label>
+                      <button type="submit" class="send-btn"
+                        [disabled]="isSubmittingComment || (!newCommentForm.value.commentText?.trim() && selectedFiles.length === 0)">
+                        <span>{{ isSubmittingComment ? 'Sending...' : 'Send Message' }}</span>
+                        <span class="material-icons">send</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Selected uploads preview -->
+                  <div *ngIf="selectedFiles.length > 0" class="selected-files-preview">
+                    <span *ngFor="let file of selectedFiles; let i = index" class="file-chip">
+                      <span class="material-icons">description</span>
+                      <span class="chip-name">{{ file.name }}</span>
+                      <button type="button" (click)="removeSelectedFile(i)" class="remove-chip">×</button>
+                    </span>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- TAB 2: INTERNAL TEAM NOTES (hidden from customers) -->
+            <div *ngIf="activeTab === 'globalNotes' && !isLoadingComms && !isCustomer" class="ws-feed-pane">
+              <!-- Internal Security Notice -->
+              <div class="internal-notes-banner mb-3">
+                <span class="material-icons text-amber-500 text-sm">lock</span>
+                <span><strong>Internal Team Notes:</strong> Strictly private to Managers, PMs, and Assignees. Customer cannot see this tab or these messages.</span>
+              </div>
+
+              <div class="chat-thread">
+                <div *ngIf="globalNotes.length === 0" class="no-comments">
+                  <span class="material-icons">lock_outline</span>
+                  <p>No internal team notes have been added yet.</p>
+                </div>
+
+                <div *ngFor="let note of globalNotes" class="chat-bubble is-internal-note"
+                  [class.bubble-right]="note.postedByUserId === currentUser.id"
+                  [class.bubble-left]="note.postedByUserId !== currentUser.id">
+                  <div class="bubble-avatar avatar-internal">
+                    {{ (note.postedByName || '?').charAt(0).toUpperCase() }}
+                  </div>
+                  <div class="bubble-body">
+                    <div class="bubble-meta">
+                      <span class="bubble-author">{{ note.postedByName }} <span class="role-badge">{{
+                          note.postedByUserRole }}</span></span>
+                      <span class="bubble-time">{{ note.postedOn | date:'dd MMM yyyy, h:mm a':'+0530' }}</span>
+                    </div>
+                    <div class="bubble-text">{{ note.commentText }}</div>
+
+                    <!-- Comment Attachments -->
+                    <div *ngIf="note.attachments && note.attachments.length > 0" class="bubble-attachments-pills">
+                      <a *ngFor="let att of note.attachments" (click)="downloadAttachment(att, note.id)"
+                        class="attachment-pill-mini">
+                        <span class="material-icons">insert_drive_file</span>
+                        <span>{{ att.fileName }}</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bottom Chat Composer for Internal Notes -->
+              <div class="chat-input-bar" *ngIf="!isCustomer">
+                <form [formGroup]="newCommentForm" (ngSubmit)="postComment('GlobalNotes')">
+                  <div class="chat-input-row">
+                    <textarea formControlName="commentText" class="chat-textarea"
+                      placeholder="Write an internal note visible only to internal team..." rows="2"
+                      (keydown)="onCommentKeyDown($event, 'GlobalNotes')">
+                    </textarea>
+
+                    <div class="chat-actions">
+                      <label for="commFilesGlobal" class="attach-label" title="Attach file(s)">
+                        <span class="material-icons">attach_file</span>
+                        <input type="file" id="commFilesGlobal" multiple (change)="onFileSelected($event)"
+                          style="display: none;">
+                      </label>
+                      <button type="submit" class="send-btn btn-internal-send"
+                        [disabled]="isSubmittingComment || (!newCommentForm.value.commentText?.trim() && selectedFiles.length === 0)">
+                        <span>{{ isSubmittingComment ? 'Sending...' : 'Post Internal Note' }}</span>
+                        <span class="material-icons">send</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Selected uploads preview -->
+                  <div *ngIf="selectedFiles.length > 0" class="selected-files-preview">
+                    <span *ngFor="let file of selectedFiles; let i = index" class="file-chip">
+                      <span class="material-icons">description</span>
+                      <span class="chip-name">{{ file.name }}</span>
+                      <button type="button" (click)="removeSelectedFile(i)" class="remove-chip">×</button>
+                    </span>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- TAB 3: TICKET METRICS & HISTORY TIMELINE -->
+            <div *ngIf="activeTab === 'timeline' && timelineAnalysis" class="ws-feed-pane">
+
+              <!-- Core metrics grid -->
+              <div class="timeline-metrics">
+                <div class="metric-item">
+                  <div class="metric-icon">
+                    <span class="material-icons">bolt</span>
+                  </div>
+                  <div class="metric-content">
+                    <span class="metric-label">First Response</span>
+                    <span class="metric-value">{{
+                      formatMinutes(timelineAnalysis.summary.timeToFirstResponseMinutes ??
+                      $any(timelineAnalysis.summary).TimeToFirstResponseMinutes)
+                      }}</span>
+                  </div>
+                </div>
+
+                <div class="metric-item"
+                  *ngIf="(ticket?.status?.toLowerCase() === 'closed') && ((timelineAnalysis.summary.timeToResolutionHours !== undefined && timelineAnalysis.summary.timeToResolutionHours !== null) || ($any(timelineAnalysis.summary).TimeToResolutionHours !== undefined && $any(timelineAnalysis.summary).TimeToResolutionHours !== null))">
+                  <div class="metric-icon">
+                    <span class="material-icons">task_alt</span>
+                  </div>
+                  <div class="metric-content">
+                    <span class="metric-label">Resolution Time</span>
+                    <span class="metric-value">{{
+                      formatDuration(timelineAnalysis.summary.timeToResolutionHours ??
+                      $any(timelineAnalysis.summary).TimeToResolutionHours)
+                      }}</span>
+                  </div>
+                </div>
+
+                <div class="metric-item"
+                  *ngIf="(ticket?.status?.toLowerCase() !== 'closed') || ((timelineAnalysis.summary.timeToResolutionHours === undefined || timelineAnalysis.summary.timeToResolutionHours === null) && ($any(timelineAnalysis.summary).TimeToResolutionHours === undefined || $any(timelineAnalysis.summary).TimeToResolutionHours === null))">
+                  <div class="metric-icon">
+                    <span class="material-icons">schedule</span>
+                  </div>
+                  <div class="metric-content">
+                    <span class="metric-label">Ticket Age</span>
+                    <span class="metric-value">{{
+                      getTicketAge($any(timelineAnalysis.summary).ticketCreatedDate ||
+                      $any(timelineAnalysis.summary).TicketCreatedDate)
+                      }}</span>
+                  </div>
+                </div>
+
+                <div class="metric-item">
+                  <div class="metric-icon">
+                    <span class="material-icons">event_note</span>
+                  </div>
+                  <div class="metric-content">
+                    <span class="metric-label">Created Date</span>
+                    <span class="metric-value">{{
+                      ($any(timelineAnalysis.summary).ticketCreatedDate ||
+                      $any(timelineAnalysis.summary).TicketCreatedDate) |
+                      date:'dd-MMM-yyyy':'+0530' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Time breakdown – user-wise grouped view -->
+              <div class="breakdown-section mt-4"
+                *ngIf="!isCustomer && userWiseBreakdown && userWiseBreakdown.length > 0">
+                <h4 class="ws-timeline-section-title">⏱ Time Breakdown by User</h4>
+
+                <div class="user-wise-breakdown">
+                  <ng-container *ngFor="let group of userWiseBreakdown">
+
+                    <!-- ──── PM Card ──── -->
+                    <div class="uwb-card uwb-pm clickable" *ngIf="group.category === 'PM'" (click)="toggleGroup(group)">
+                      <div class="uwb-card-header">
+                        <div class="uwb-avatar uwb-avatar-pm">
+                          <span class="material-icons">manage_accounts</span>
+                        </div>
+                        <div class="uwb-header-info">
+                          <span class="uwb-role-tag uwb-role-pm">PM</span>
+                          <span class="uwb-name">Project Manager</span>
+                        </div>
+                        <div class="uwb-total-time">{{ formatMinutes(group.totalMinutes) }}</div>
+                        <span class="material-icons uwb-chevron">{{ group.expanded ? 'expand_less' : 'expand_more'
+                          }}</span>
+                      </div>
+                      <!-- Progress bar -->
+                      <div class="uwb-progress-track">
+                        <div class="uwb-progress-fill uwb-fill-pm"
+                          [style.width]="getTimelinePct(group.totalMinutes) + '%'"></div>
+                      </div>
+                      <!-- Sub-state pills (visible when expanded) -->
+                      <div class="uwb-sub-items" *ngIf="group.expanded && group.subItems.length > 0"
+                        (click)="$event.stopPropagation()">
+                        <span class="uwb-sub-pill uwb-sub-pm" *ngFor="let sub of group.subItems">
+                          {{ sub.label }}: <strong>{{ formatMinutes(sub.minutes) }}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- ──── Assignee Card ──── -->
+                    <div class="uwb-card uwb-assignee clickable" *ngIf="group.category === 'Assignee'"
+                      (click)="toggleGroup(group)">
+                      <div class="uwb-card-header">
+                        <div class="uwb-avatar uwb-avatar-dev">
+                          <span class="material-icons">people</span>
+                        </div>
+                        <div class="uwb-header-info">
+                          <span class="uwb-role-tag uwb-role-dev">Executive</span>
+                          <span class="uwb-name">Executives</span>
+                        </div>
+                        <div class="uwb-total-time">{{ formatMinutes(group.totalMinutes) }}</div>
+                        <span class="material-icons uwb-chevron">{{ group.expanded ? 'expand_less' : 'expand_more'
+                          }}</span>
+                      </div>
+                      <!-- Progress bar -->
+                      <div class="uwb-progress-track">
+                        <div class="uwb-progress-fill uwb-fill-dev"
+                          [style.width]="getTimelinePct(group.totalMinutes) + '%'"></div>
+                      </div>
+                      <!-- Sub-type pills: Individual named assignees (visible when expanded) -->
+                      <div class="uwb-sub-items" *ngIf="group.expanded && group.subItems.length > 0"
+                        (click)="$event.stopPropagation()">
+                        <span class="uwb-sub-pill uwb-sub-dev" *ngFor="let sub of group.subItems">
+                          👤 {{ sub.label }}: <strong>{{ formatMinutes(sub.minutes) }}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- ──── On Hold Card ──── -->
+                    <div class="uwb-card uwb-onhold" *ngIf="group.category === 'OnHold'">
+                      <div class="uwb-card-header">
+                        <div class="uwb-avatar uwb-avatar-hold">
+                          <span class="material-icons">pause_circle</span>
+                        </div>
+                        <div class="uwb-header-info">
+                          <span class="uwb-role-tag uwb-role-hold">On Hold</span>
+                          <span class="uwb-name">Ticket Paused</span>
+                        </div>
+                        <div class="uwb-total-time">{{ formatMinutes(group.totalMinutes) }}</div>
+                      </div>
+                      <div class="uwb-progress-track">
+                        <div class="uwb-progress-fill uwb-fill-hold"
+                          [style.width]="getTimelinePct(group.totalMinutes) + '%'"></div>
+                      </div>
+                    </div>
+
+                  </ng-container>
+                </div>
+
+                <!-- Total bar -->
+                <div class="uwb-total-row">
+                  <span class="uwb-total-label">Total Active Time</span>
+                  <span class="uwb-total-value">{{ formatMinutes(totalTimelineMinutes) }}</span>
+                </div>
+              </div>
+
+              <!-- History Progression List -->
+              <div class="timeline-visualization mt-4">
+                <h4 class="ws-timeline-section-title">History Progression Log</h4>
+
+                <div class="timeline-container">
+                  <div class="timeline-line"></div>
+                  <div *ngIf="!ticketHistory || ticketHistory.length === 0" class="no-history">
+                    <p>No history entries found for this ticket.</p>
+                  </div>
+
+                  <div *ngFor="let entry of ticketHistory" class="timeline-item completed">
+                    <div class="timeline-marker">
+                      <div class="marker-dot"></div>
+                    </div>
+                    <div class="timeline-content">
+                      <div class="timeline-badge" [ngClass]="{
+                         'open': entry.eventDescription.includes('Created') || entry.eventDescription.includes('Open'),
+                         'work-done': entry.eventDescription.includes('Work Done'),
+                         'pending': entry.eventDescription.includes('Pending'),
+                         'closed': entry.eventDescription.includes('Closed'),
+                         'rework': entry.eventDescription.includes('Rework')
+                       }">
+                        {{ entry.changeDate | date:'dd MMM yyyy, h:mm a':'+0530' }}
+                      </div>
+                      <div class="timeline-description">
+                        <strong>{{ entry.changedByUserName || (entry.changedByUserRole) }} ({{ entry.changedByUserRole
+                          }})</strong>:
+                        {{ entry.eventDescription }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+      <!-- RIGHT: Properties Panel Sidebar (State metadata, Notes Drawer) -->
+      <aside class="sidebar">
+
+        <!-- Metadata Selectors Block -->
+        <div class="sidebar-meta-panel">
+          <h3 class="sidebar-title">Properties</h3>
+          <form [formGroup]="updateForm" (ngSubmit)="saveChanges()" class="horizontal-update-form" *ngIf="!isCustomer">
+            <!-- Scrollable form fields -->
+            <div class="form-scroll-area">
+              <div class="form-field">
+                <div class="field-label-wrapper">
+                  <span class="material-icons field-icon">task_alt</span>
+                  <label for="status">State</label>
+                </div>
+                <div class="select-wrapper">
+                  <select id="status" formControlName="status" class="form-select status-select"
+                    [ngClass]="updateForm.get('status')?.value?.toLowerCase()?.replace(' ', '-')">
+                    <option *ngFor="let s of statusOptions" [value]="s"
+                      style="background-color: var(--bg-workspace, #08090d); color: var(--text-high, #f1f5f9);">{{ s }}
+                    </option>
+                  </select>
+                  <span class="material-icons select-arrow">expand_more</span>
+                </div>
+              </div>
+
+              <ng-container *ngIf="!isDeveloper">
+                <div class="form-field">
+                  <div class="field-label-wrapper">
+                    <span class="material-icons field-icon">flag</span>
+                    <label for="priority">Priority</label>
+                  </div>
+                  <div class="select-wrapper">
+                    <select id="priority" formControlName="priority" class="form-select priority-select"
+                      [ngClass]="'priority-' + updateForm.get('priority')?.value?.toLowerCase()">
+                      <option *ngFor="let p of priorityOptions" [value]="p"
+                        style="background-color: var(--bg-workspace, #08090d); color: var(--text-high, #f1f5f9);">{{ p
+                        }}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-field relative">
+                  <div class="field-label-wrapper">
+                    <span class="material-icons field-icon">person</span>
+                    <label for="assignee">Assign To</label>
+                  </div>
+                  <div class="select-wrapper relative" style="max-width: 220px; width: 100%;">
+                    <input type="text" [(ngModel)]="assigneeSearchQuery" [ngModelOptions]="{standalone: true}"
+                      (focus)="showAssigneeDropdown = true; filterAssignees()" (blur)="onAssigneeBlur()"
+                      (input)="onAssigneeSearchInput()" class="form-select assignee-select cursor-text"
+                      style="background-color: var(--bg-workspace, #08090d); color: var(--text-high, #f1f5f9); text-align: left; direction: ltr; padding: 0.15rem 1.75rem 0.15rem 0.5rem;"
+                      placeholder="Search executive...">
+                    <span
+                      class="material-icons absolute right-1.5 top-1/2 -translate-y-1/2 text-brand-text-400 pointer-events-none text-sm">
+                      {{ showAssigneeDropdown ? 'expand_less' : 'expand_more' }}
+                    </span>
+
+                    <!-- Dropdown list -->
+                    <div *ngIf="showAssigneeDropdown"
+                      class="absolute right-0 mt-1 border border-brand-dark-800 rounded-lg shadow-xl max-h-48 overflow-y-auto z-50 custom-scrollbar"
+                      style="background-color: var(--bg-workspace, #08090d); width: 280px; left: auto; direction: ltr; text-align: left;">
+                      <div (mousedown)="selectAssignee({ id: null, fullName: 'Unassigned' })"
+                        class="px-3 py-1.5 text-xs text-brand-text-400 hover:bg-brand-dark-800 cursor-pointer transition italic">
+                        Unassigned
+                      </div>
+                      <div *ngFor="let dev of filteredAssignees" (mousedown)="selectAssignee(dev)"
+                        class="px-3 py-1.5 text-xs text-brand-text-100 hover:bg-brand-dark-800 cursor-pointer transition flex flex-col gap-0.5">
+                        <span class="font-semibold">{{ dev.fullName }}</span>
+                        <span class="text-[10px] text-brand-text-400 font-mono">{{ dev.assigneeNumber }}</span>
+                      </div>
+                      <div *ngIf="filteredAssignees.length === 0"
+                        class="px-3 py-1.5 text-xs text-brand-text-400 text-center">
+                        No executives found
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Difficulty (Commented out)
+                  <div class="form-field">
+                    <div class="field-label-wrapper">
+                      <span class="material-icons field-icon">fitness_center</span>
+                      <label for="difficulty">Difficulty</label>
+                    </div>
+                    <div class="select-wrapper">
+                      <select id="difficulty" formControlName="difficulty" class="form-select difficulty-select">
+                        <option *ngFor="let d of difficultyOptions" [value]="d.id" style="background-color: var(--bg-workspace, #08090d); color: var(--text-high, #f1f5f9);">{{ d.label }}</option>
+                      </select>
+                    </div>
+                  </div>
+                  -->
+
+                <div class="form-field">
+                  <div class="field-label-wrapper">
+                    <span class="material-icons field-icon">event</span>
+                    <label for="deadline">Deadline</label>
+                  </div>
+                  <div class="date-input-wrapper" (click)="deadlineInput.showPicker()">
+                    <input #deadlineInput type="datetime-local" id="deadline" formControlName="deadline"
+                      class="form-control text-sm" (click)="$event.stopPropagation(); deadlineInput.showPicker()">
+                    <span class="material-icons date-icon"
+                      (click)="$event.stopPropagation(); deadlineInput.showPicker()">calendar_today</span>
+                  </div>
+                </div>
+              </ng-container>
+
+              <div class="form-field" *ngIf="ticket.docketNumber">
+                <div class="field-label-wrapper">
+                  <span class="material-icons field-icon">local_shipping</span>
+                  <label>Docket No</label>
+                </div>
+                <div class="docket-no-container">
+                  <span class="clickable-docket-box" (click)="viewDocketDetails(ticket.docketNumber)">
+                    <span>{{ ticket.docketNumber }}</span>
+                    <span class="material-icons">open_in_new</span>
+                  </span>
+                  <span class="docket-helper">Click docket no. to see details</span>
+                </div>
+              </div>
+
+              <!-- Optional update note field -->
+              <div class="form-field note-field">
+                <div class="field-label-wrapper mb-1">
+                  <span class="material-icons field-icon">note_alt</span>
+                  <label for="updateNote" style="text-transform: none; letter-spacing: normal;">Add note with this
+                    update</label>
+                </div>
+                <textarea id="updateNote" formControlName="updateNote" class="update-note-textarea"
+                  placeholder="Write a brief explanation for this change..." rows="2">
+                </textarea>
+              </div>
+            </div>
+
+            <!-- Save button below scroll area, always visible -->
+            <div class="sidebar-save-actions">
+              <div class="dirty-indicator" *ngIf="updateForm.dirty">
+                <span class="material-icons text-sm">warning</span>
+                <span>Unsaved properties changes</span>
+              </div>
+              <button type="submit" [disabled]="!updateForm.dirty || updateForm.invalid" class="save-button">
+                Save Changes
+              </button>
+            </div>
+          </form>
+
+          <!-- Creator name display (visible to all roles) -->
+          <div class="current-creator-display"
+            style="margin-top: 10px; margin-bottom: 8px; padding: 8px 10px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 6px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #93c5fd;">
+            <span class="material-icons" style="font-size: 16px; color: #60a5fa;">account_circle</span>
+            <div>
+              <span style="color: #64748b; font-weight: 600;">Created by: </span>
+              <strong style="color: #000000; font-weight: 700; background: #ffffff; padding: 2px 6px; border-radius: 4px;">{{ $any(ticket).createdByName || $any(ticket).createdBy || ticket.customerName || 'Unknown' }}</strong>
+              <span *ngIf="$any(ticket).createdByRole && $any(ticket).createdByRole.toLowerCase() !== 'customer'"
+                class="text-[10px] px-1.5 py-0.5 ml-1 rounded bg-purple-900/40 text-purple-300 border border-purple-700/50 uppercase font-mono font-bold">{{
+                $any(ticket).createdByRole }}</span>
+              <div
+                *ngIf="($any(ticket).createdByName || $any(ticket).createdBy) && ticket.customerName && ($any(ticket).createdByName || $any(ticket).createdBy) !== ticket.customerName"
+                style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                For Customer: <strong style="color: #000000; font-weight: 600;">{{ ticket.customerName }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Assignee name display for PM/Dev below form (visible to all roles) -->
+          <div *ngIf="!isCustomer && ticket.assignedToName" class="current-assignee-display">
+            <span class="material-icons" style="font-size:14px; color: #10b981;">person_check</span>
+            Currently assigned to <strong>{{ ticket.assignedToName }}</strong>
+          </div>
+
+          <!-- Customer feedback rating display -->
+          <div *ngIf="ticket.rating" class="ticket-rating-display"
+            style="margin-top: 12px; padding: 10px 12px; background: rgba(234, 179, 8, 0.08); border: 1.5px solid rgba(234, 179, 8, 0.25); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="material-icons" style="color: #eab308; font-size: 18px;">star</span>
+              <span style="font-size: 12.5px; font-weight: 600;">Customer Feedback</span>
+            </div>
+            <div
+              style="font-size: 14px; font-weight: 700; padding: 2px 10px; border-radius: 12px; background-color: #eab308; color: #0f172a; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+              {{ ticket.rating }} / 5
+            </div>
+          </div>
+
+          <!-- Read-only ticket info for customers (no update form) -->
+          <div *ngIf="isCustomer" class="customer-ticket-info">
+            <div class="info-row">
+              <span class="material-icons info-icon">task_alt</span>
+              <span class="info-label">Status</span>
+              <span class="info-value status-pill" [ngClass]="getCustomerDisplayStatus(ticket.status)?.toLowerCase()">
+                {{ getCustomerDisplayStatus(ticket.status) }}
+              </span>
+            </div>
+
+            <div class="info-row mt-3" *ngIf="ticket.docketNumber">
+              <span class="material-icons info-icon">local_shipping</span>
+              <span class="info-label">Docket No</span>
+              <div class="docket-no-container">
+                <span class="clickable-docket-box" (click)="viewDocketDetails(ticket.docketNumber)">
+                  <span>{{ ticket.docketNumber }}</span>
+                  <span class="material-icons">open_in_new</span>
+                </span>
+                <span class="docket-helper">Click docket no. to see tracking</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Relations Panel Removed -->
+
+
+
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- Set Parent Modal (Commented out)
+  <div class="rel-modal-backdrop" *ngIf="showParentModal" (click)="closeParentModal()">
+    <div class="rel-modal" (click)="$event.stopPropagation()">
+      <div class="rel-modal-header">
+        <span class="rel-modal-icon">🔗</span>
+        <div>
+          <h3>Set Parent Ticket</h3>
+          <p>Search by ticket number or subject</p>
+        </div>
+        <button class="rel-modal-close" (click)="closeParentModal()">✕</button>
+      </div>
+
+      <div class="rel-modal-search">
+        <input type="text"
+               class="rel-search-input"
+               placeholder="e.g. TK-042 or 'Login bug'…"
+               [(ngModel)]="parentSearchQuery"
+               (input)="searchParentTickets()"
+               autofocus>
+        <span class="rel-search-spinner" *ngIf="isSearchingParent">⟳</span>
+      </div>
+
+      <div class="rel-modal-results" *ngIf="parentSearchResults.length > 0">
+        <div class="rel-result-item" *ngFor="let t of parentSearchResults"
+             (click)="selectParent(t)" [class.disabled]="isSettingParent">
+          <div class="rri-top">
+            <span class="rri-num">{{ t.ticketNumber || t.TicketNumber }}</span>
+            <span class="rri-status" [style.color]="getStatusColor(t.status || t.Status)">{{ t.status || t.Status }}</span>
+            <span class="rri-priority">{{ t.priority || t.Priority }}</span>
+          </div>
+          <div class="rri-subject">{{ t.subject || t.Subject }}</div>
+          <span class="rri-arrow">Select →</span>
+        </div>
+      </div>
+
+      <div class="rel-modal-empty" *ngIf="parentSearchQuery && !isSearchingParent && parentSearchResults.length === 0">
+        No tickets found for "{{ parentSearchQuery }}"
+      </div>
+
+      <div class="rel-modal-empty muted" *ngIf="!parentSearchQuery">
+        Start typing to search tickets…
+      </div>
+    </div>
+  </div>
+  -->
+
+  <!-- Docket Details Modal Popup -->
+  <div class="rel-modal-backdrop" *ngIf="showDocketModal" (click)="closeDocketModal()">
+    <div class="rel-modal large-modal" (click)="$event.stopPropagation()">
+      <div class="rel-modal-header">
+        <span class="rel-modal-icon">📦</span>
+        <div>
+          <h3>Docket Tracking Details</h3>
+          <p>Metadata & Transit History from MKFoods System</p>
+        </div>
+        <button class="rel-modal-close" (click)="closeDocketModal()">✕</button>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="docket-tabs-wrapper" *ngIf="!isLoadingDocketDetails && docketDetails">
+        <div class="docket-tabs">
+          <button class="docket-tab-btn" [class.active]="activeDocketTab === 'general'"
+            (click)="activeDocketTab = 'general'">
+            <span class="material-icons">info</span>
+            <span>General Detail</span>
+          </button>
+          <button class="docket-tab-btn" [class.active]="activeDocketTab === 'tracking'"
+            (click)="activeDocketTab = 'tracking'">
+            <span class="material-icons">route</span>
+            <span>Tracking Log</span>
+          </button>
+          <button class="docket-tab-btn" [class.active]="activeDocketTab === 'pod'" (click)="activeDocketTab = 'pod'">
+            <span class="material-icons">photo_library</span>
+            <span>POD & Photos</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="isLoadingDocketDetails" class="p-5 text-center">
+        <div class="spinner mx-auto mb-2"></div>
+        <p class="text-sm muted">Fetching live docket tracking data...</p>
+      </div>
+
+      <!-- Content -->
+      <div *ngIf="!isLoadingDocketDetails && docketDetails" class="rel-modal-content p-4"
+        style="max-height: 65vh; overflow-y: auto;">
+
+        <!-- Tab 1: General Detail -->
+        <div *ngIf="activeDocketTab === 'general' && docketDetails.details" class="docket-details-grid mb-4">
+          <div class="detail-group">
+            <span class="detail-label">Docket No</span>
+            <span class="detail-val highlight">{{ docketDetails.details.docketNo }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Current Status</span>
+            <span class="detail-val status-badge" [ngClass]="docketDetails.details.status?.toLowerCase()">{{
+              docketDetails.details.status }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Booking Date</span>
+            <span class="detail-val">{{ docketDetails.details.docketDate | date:'dd-MMM-yyyy':'+0530' }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Expected Delivery (EDD)</span>
+            <span class="detail-val">{{ docketDetails.details.edd | date:'dd-MMM-yyyy':'+0530' }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Origin City</span>
+            <span class="detail-val">{{ docketDetails.details.fromCity || 'N/A' }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Destination City</span>
+            <span class="detail-val">{{ docketDetails.details.toCity || 'N/A' }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Current Location</span>
+            <span class="detail-val">{{ docketDetails.details.currentLocation || 'N/A' }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Billing Party</span>
+            <span class="detail-val" [title]="docketDetails.details.billingParty">{{ docketDetails.details.billingParty
+              || 'N/A' }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Packages</span>
+            <span class="detail-val">{{ docketDetails.details.packages || 0 }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Transport Mode</span>
+            <span class="detail-val">{{ docketDetails.details.transportMode || 'N/A' }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Consignor</span>
+            <span class="detail-val">{{ docketDetails.details.consignor || 'N/A' }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Consignee</span>
+            <span class="detail-val">{{ docketDetails.details.consignee || 'N/A' }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Delivery Date</span>
+            <span class="detail-val">{{ docketDetails.details.deliveryDate ? (docketDetails.details.deliveryDate |
+              date:'dd-MMM-yyyy h:mm a':'+0530') : 'N/A' }}</span>
+          </div>
+          <div class="detail-group" *ngIf="docketDetails.details.receiverName">
+            <span class="detail-label">Receiver Name</span>
+            <span class="detail-val">{{ docketDetails.details.receiverName }}</span>
+          </div>
+        </div>
+
+        <div
+          *ngIf="activeDocketTab === 'general' && docketDetails.details && docketDetails.details.remarks && docketDetails.details.remarks !== 'No Remarks'"
+          class="mb-4 p-3 bg-workspace rounded border border-gray-800 text-xs"
+          style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.08); border-radius: 6px;">
+          <strong>Remarks:</strong> {{ docketDetails.details.remarks }}
+        </div>
+
+        <!-- Tab 2: Tracking Timeline -->
+        <div *ngIf="activeDocketTab === 'tracking'" class="docket-history-section">
+          <h4 class="section-title mb-2 flex items-center gap-1">
+            <span class="material-icons text-sm" style="font-size: 16px; vertical-align: middle;">timeline</span>
+            <span>Transit Journey Log</span>
+          </h4>
+
+          <div *ngIf="!docketDetails.history || docketDetails.history.length === 0"
+            class="no-history text-center p-3 muted text-xs">
+            No transit events tracked for this docket yet.
+          </div>
+
+          <div *ngIf="docketDetails.history && docketDetails.history.length > 0" class="docket-timeline">
+            <div *ngFor="let h of docketDetails.history" class="docket-timeline-item">
+              <div class="timeline-dot"
+                [ngClass]="{'delivered': h.activityAtLocation?.toLowerCase().includes('deliverd') || h.activityAtLocation?.toLowerCase().includes('delivery')}">
+              </div>
+              <div class="timeline-info">
+                <div class="timeline-header flex justify-between">
+                  <span class="activity-text font-semibold">{{ h.activityAtLocation }}</span>
+                  <span class="activity-time text-xs muted">{{ h.activityDateTime | date:'dd MMM yyyy, h:mm a':'+0530'
+                    }}</span>
+                </div>
+                <div class="activity-loc text-xs muted">Location: {{ h.transitLocation }}</div>
+                <div class="activity-remark text-xs muted italic mt-1" *ngIf="h.remark && h.remark !== ''">Remark: {{
+                  h.remark }}</div>
+
+                <!-- Attached Status Change Photo -->
+                <div class="timeline-photo-wrapper mt-2" *ngIf="h.statusPhotoName">
+                  <a [href]="getDocketDocUrl('status-photo', h.statusPhotoName)" target="_blank"
+                    class="timeline-photo-link">
+                    <img [src]="getDocketDocUrl('status-photo', h.statusPhotoName)" class="timeline-photo"
+                      alt="Transit Status Photo">
+                    <div class="photo-overlay">
+                      <span class="material-icons">zoom_in</span>
+                    </div>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: POD & Photos -->
+        <div *ngIf="activeDocketTab === 'pod'" class="docket-pod-section">
+          <!-- POD Files -->
+          <div class="pod-section-block mb-4">
+            <h4 class="section-title mb-3 flex items-center gap-1">
+              <span class="material-icons text-sm" style="font-size: 16px;">receipt_long</span>
+              <span>POD Documents</span>
+            </h4>
+            <div *ngIf="!docketDetails.pods || docketDetails.pods.length === 0"
+              class="no-pods text-center p-3 muted text-xs bg-workspace border border-dashed rounded"
+              style="background: rgba(255,255,255,0.01); border-color: rgba(255,255,255,0.06); border-radius: 6px;">
+              No POD documents uploaded.
+            </div>
+            <div class="pod-grid" *ngIf="docketDetails.pods && docketDetails.pods.length > 0">
+              <div class="pod-card" *ngFor="let pod of docketDetails.pods">
+                <div class="pod-card-header">
+                  <span class="material-icons pod-icon">image</span>
+                  <span class="pod-filename" [title]="pod.documentName">{{ pod.documentName }}</span>
+                </div>
+                <div class="pod-card-body">
+                  <a [href]="getDocketDocUrl('pod', pod.documentName)" target="_blank" class="pod-img-wrapper">
+                    <img [src]="getDocketDocUrl('pod', pod.documentName)" class="pod-preview-img" alt="POD File">
+                    <div class="img-zoom-overlay"><span class="material-icons">open_in_new</span></div>
+                  </a>
+                </div>
+                <div class="pod-card-footer">
+                  <span class="pod-date text-xs muted">{{ pod.uploadedOn | date:'dd MMM yyyy, h:mm a':'+0530' }}</span>
+                  <a [href]="getDocketDocUrl('pod', pod.documentName)" target="_blank" class="pod-download-btn">
+                    <span class="material-icons">download</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Signatures -->
+          <div class="pod-section-block mb-4" *ngIf="docketDetails.pods && docketDetails.pods.length > 0">
+            <h4 class="section-title mb-3 flex items-center gap-1">
+              <span class="material-icons text-sm" style="font-size: 16px;">draw</span>
+              <span>Electronic Signatures</span>
+            </h4>
+            <div class="signature-grid">
+              <ng-container *ngFor="let pod of docketDetails.pods">
+                <div class="signature-card" *ngIf="pod.eSignature">
+                  <div class="signature-header text-xs muted mb-2">
+                    Signature for {{ pod.documentName }}
+                  </div>
+                  <div class="signature-body">
+                    <img [src]="getDocketDocUrl('signature', pod.eSignature)" class="signature-img"
+                      alt="Electronic Signature">
+                  </div>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+
+          <!-- Transit Photos -->
+          <div class="pod-section-block">
+            <h4 class="section-title mb-3 flex items-center gap-1">
+              <span class="material-icons text-sm" style="font-size: 16px;">photo_camera</span>
+              <span>Journey Activity Photos</span>
+            </h4>
+            <div *ngIf="allStatusPhotos.length === 0"
+              class="no-pods text-center p-3 muted text-xs bg-workspace border border-dashed rounded"
+              style="background: rgba(255,255,255,0.01); border-color: rgba(255,255,255,0.06); border-radius: 6px;">
+              No journey photos captured.
+            </div>
+            <div class="photo-gallery-grid" *ngIf="allStatusPhotos.length > 0">
+              <div class="gallery-card" *ngFor="let photo of allStatusPhotos">
+                <div class="gallery-card-body">
+                  <a [href]="getDocketDocUrl('status-photo', photo.name)" target="_blank" class="gallery-img-wrapper">
+                    <img [src]="getDocketDocUrl('status-photo', photo.name)" class="gallery-img"
+                      alt="Journey Status Photo">
+                    <div class="img-zoom-overlay"><span class="material-icons">zoom_in</span></div>
+                  </a>
+                </div>
+                <div class="gallery-card-footer">
+                  <span class="gallery-loc font-semibold text-xs">{{ photo.location }}</span>
+                  <span class="gallery-date text-xs muted">{{ photo.date | date:'dd MMM yyyy':'+0530' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="rel-modal-empty" *ngIf="!isLoadingDocketDetails && !docketDetails">
+        Failed to load details for this docket number.
+      </div>
+    </div>
+  </div>
+
+</div>

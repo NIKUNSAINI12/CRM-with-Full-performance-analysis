@@ -1,0 +1,6 @@
+@ticketing_system_backend_HostAddress = http://localhost:5058
+
+GET {{ticketing_system_backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

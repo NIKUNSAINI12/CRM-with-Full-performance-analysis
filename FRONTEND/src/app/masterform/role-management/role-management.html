@@ -1,0 +1,190 @@
+<div class="h-full flex flex-col bg-brand-dark-950 text-brand-text-100 p-6">
+  
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h2 class="text-2xl font-bold text-brand-text-100 flex items-center gap-2">
+        <span class="material-icons text-brand-primary">security</span>
+        Role & Workflow Management
+      </h2>
+      <p class="text-brand-text-400 text-sm mt-1">Manage system roles, permissions, and ticket status flows.</p>
+    </div>
+    <div class="flex gap-3">
+      <button *ngIf="activeTab === 'Roles'" (click)="openCreateModal()" class="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-600 transition flex items-center gap-2 font-medium">
+        <span class="material-icons text-sm">add</span> Add New Role
+      </button>
+      <button *ngIf="activeTab === 'StatusWorkflows'" (click)="openCreateStatusWorkflowModal()" class="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-600 transition flex items-center gap-2 font-medium">
+        <span class="material-icons text-sm">add</span> Add Status Rule
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex border-b border-brand-dark-800 mb-6 gap-6">
+    <button (click)="setTab('Roles')" [class.border-brand-primary]="activeTab === 'Roles'" [class.text-brand-primary]="activeTab === 'Roles'" class="pb-3 border-b-2 font-medium transition text-brand-text-400 hover:text-brand-text-200" [class.border-transparent]="activeTab !== 'Roles'">
+      System Roles
+    </button>
+    <button (click)="setTab('StatusWorkflows')" [class.border-brand-primary]="activeTab === 'StatusWorkflows'" [class.text-brand-primary]="activeTab === 'StatusWorkflows'" class="pb-3 border-b-2 font-medium transition text-brand-text-400 hover:text-brand-text-200" [class.border-transparent]="activeTab !== 'StatusWorkflows'">
+      Status Workflows
+    </button>
+  </div>
+
+  <!-- Roles Tab -->
+  <div *ngIf="activeTab === 'Roles'" class="bg-brand-dark-900 border border-brand-dark-800 rounded-lg overflow-hidden flex-1 flex flex-col shadow-lg">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-brand-dark-950/50 border-b border-brand-dark-800">
+            <th class="py-3 px-4 font-semibold text-brand-text-400 text-xs uppercase tracking-wider">Role Name</th>
+            <th class="py-3 px-4 font-semibold text-brand-text-400 text-xs uppercase tracking-wider">Default Dashboard</th>
+            <th class="py-3 px-4 font-semibold text-brand-text-400 text-xs uppercase tracking-wider text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-brand-dark-800">
+          <tr *ngFor="let role of roles" class="hover:bg-brand-dark-800/50 transition">
+            <td class="py-3 px-4 font-medium">{{ role.roleName }}</td>
+            <td class="py-3 px-4 text-brand-text-400 font-mono text-sm">{{ role.dashboardRoute || role['defaultDashboardRoute'] }}</td>
+            <td class="py-3 px-4 text-right">
+              <button (click)="openEditModal(role)" class="text-brand-primary hover:text-brand-primary-400 transition" title="Edit Role">
+                <span class="material-icons">edit</span>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="roles.length === 0">
+            <td colspan="3" class="py-8 text-center text-brand-text-500">No roles defined.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Status Workflows Tab -->
+  <div *ngIf="activeTab === 'StatusWorkflows'" class="bg-brand-dark-900 border border-brand-dark-800 rounded-lg overflow-hidden flex-1 flex flex-col shadow-lg">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-brand-dark-950/50 border-b border-brand-dark-800">
+            <th class="py-3 px-4 font-semibold text-brand-text-400 text-xs uppercase tracking-wider">Role Name</th>
+            <th class="py-3 px-4 font-semibold text-brand-text-400 text-xs uppercase tracking-wider">Current Status</th>
+            <th class="py-3 px-4 font-semibold text-brand-text-400 text-xs uppercase tracking-wider">Next Allowed Status</th>
+            <th class="py-3 px-4 font-semibold text-brand-text-400 text-xs uppercase tracking-wider">Condition</th>
+            <th class="py-3 px-4 font-semibold text-brand-text-400 text-xs uppercase tracking-wider text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-brand-dark-800">
+          <tr *ngFor="let flow of statusWorkflows" class="hover:bg-brand-dark-800/50 transition">
+            <td class="py-3 px-4 font-medium text-brand-primary">{{ flow.roleName }}</td>
+            <td class="py-3 px-4"><span class="px-2 py-1 bg-brand-dark-800 text-brand-text-200 rounded text-xs">{{ flow.currentStatus }}</span></td>
+            <td class="py-3 px-4 flex items-center gap-2">
+              <span class="material-icons text-brand-text-500 text-sm">arrow_forward</span>
+              <span class="px-2 py-1 bg-brand-primary/10 text-brand-primary rounded text-xs border border-brand-primary/20">{{ flow.nextStatus }}</span>
+            </td>
+            <td class="py-3 px-4 text-brand-text-400 text-sm">{{ flow.condition || 'None' }}</td>
+            <td class="py-3 px-4 text-right">
+              <button (click)="deleteStatusWorkflow(flow.id)" class="text-red-400 hover:text-red-300 transition" title="Delete Rule">
+                <span class="material-icons text-sm">delete</span>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="statusWorkflows.length === 0">
+            <td colspan="5" class="py-8 text-center text-brand-text-500">No status workflows defined. All roles have unrestricted status transitions by default.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Role Edit Modal -->
+  <div *ngIf="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-brand-dark-900 border border-brand-dark-700 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
+      <div class="p-6 border-b border-brand-dark-800 flex justify-between items-center shrink-0">
+        <h3 class="text-xl font-bold text-white">{{ isEditing ? 'Edit Role' : 'Create New Role' }}</h3>
+        <button (click)="closeModal()" class="text-brand-text-400 hover:text-white transition">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div>
+            <label class="block text-sm font-medium text-brand-text-400 mb-2">Role Name</label>
+            <input type="text" [(ngModel)]="newRoleName" class="w-full bg-brand-dark-950 border border-brand-dark-700 rounded-md px-4 py-2.5 text-brand-text-100 focus:outline-none focus:border-brand-primary transition" placeholder="e.g. QA Tester">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-brand-text-400 mb-2">Default Dashboard Entry</label>
+            <select [(ngModel)]="newDashboardRoute" class="w-full bg-brand-dark-950 border border-brand-dark-700 rounded-md px-4 py-2.5 text-brand-text-100 focus:outline-none focus:border-brand-primary transition appearance-none">
+              <option *ngFor="let db of dashboards" [value]="db.value">{{ db.label }} ({{ db.value }})</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6 border-t border-brand-dark-800 flex justify-end gap-3 shrink-0 bg-brand-dark-950/50 rounded-b-xl">
+        <button (click)="closeModal()" class="px-4 py-2 text-brand-text-300 hover:text-white transition font-medium">Cancel</button>
+        <button (click)="saveRole()" class="px-6 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-600 transition font-medium shadow-lg shadow-brand-primary/20">
+          Save Configuration
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Workflow Modal -->
+  <div *ngIf="isStatusWorkflowModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-brand-dark-900 border border-brand-dark-700 rounded-xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh]">
+      <div class="p-6 border-b border-brand-dark-800 flex justify-between items-center shrink-0">
+        <h3 class="text-xl font-bold text-white">Add Status Workflow Rule</h3>
+        <button (click)="closeStatusWorkflowModal()" class="text-brand-text-400 hover:text-white transition">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
+        <p class="text-sm text-brand-text-400 mb-6">Define which status a specific role is allowed to transition to. If rules are defined, the UI dropdowns will automatically filter to match.</p>
+        
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-brand-text-400 mb-2">Applies To Role</label>
+            <select [(ngModel)]="newStatusWorkflow.roleName" class="w-full bg-brand-dark-950 border border-brand-dark-700 rounded-md px-4 py-2.5 text-brand-text-100 focus:outline-none focus:border-brand-primary transition appearance-none">
+              <option value="">-- Select Role --</option>
+              <option *ngFor="let r of roles" [value]="r.roleName">{{ r.roleName }}</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-brand-text-400 mb-2">When Ticket Status Is</label>
+              <select [(ngModel)]="newStatusWorkflow.currentStatus" class="w-full bg-brand-dark-950 border border-brand-dark-700 rounded-md px-4 py-2.5 text-brand-text-100 focus:outline-none focus:border-brand-primary transition appearance-none">
+                <option value="">-- Select Status --</option>
+                <option value="*">Any (*)</option>
+                <option *ngFor="let s of allStatuses" [value]="s.statusName">{{ s.statusName }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-brand-text-400 mb-2">Allow Changing To</label>
+              <select [(ngModel)]="newStatusWorkflow.nextStatus" class="w-full bg-brand-dark-950 border border-brand-dark-700 rounded-md px-4 py-2.5 text-brand-text-100 focus:outline-none focus:border-brand-primary transition appearance-none">
+                <option value="">-- Select Status --</option>
+                <option *ngFor="let s of allStatuses" [value]="s.statusName">{{ s.statusName }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-brand-text-400 mb-2">Condition (Optional)</label>
+            <select [(ngModel)]="newStatusWorkflow.condition" class="w-full bg-brand-dark-950 border border-brand-dark-700 rounded-md px-4 py-2.5 text-brand-text-100 focus:outline-none focus:border-brand-primary transition appearance-none">
+              <option value="">None (Always Allow)</option>
+              <option value="RequiresAllChildrenClosed">Requires All Sub-Tickets to be Closed</option>
+              <option value="RequiresParentOpen">Requires Parent to be Open</option>
+            </select>
+            <p class="text-xs text-brand-text-500 mt-2">Additional backend validations applied before transition is accepted.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6 border-t border-brand-dark-800 flex justify-end gap-3 shrink-0 bg-brand-dark-950/50 rounded-b-xl">
+        <button (click)="closeStatusWorkflowModal()" class="px-4 py-2 text-brand-text-300 hover:text-white transition font-medium">Cancel</button>
+        <button (click)="saveStatusWorkflow()" class="px-6 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-600 transition font-medium shadow-lg shadow-brand-primary/20">
+          Save Rule
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

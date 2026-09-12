@@ -1,0 +1,345 @@
+<div class="pd-shell" [class.pd-fullscreen]="isFullscreen">
+
+  <!-- ═══════════════════════════════════════ VIEW MODE PICKER MODAL -->
+  <div class="fs-modal-backdrop" *ngIf="showFsModal" (click)="closeFsModal()">
+    <div class="fs-modal" (click)="$event.stopPropagation()">
+      <div class="fs-modal-header">
+        <span class="fs-modal-icon">🖥️</span>
+        <div>
+          <h3>Choose Fullscreen View</h3>
+          <p>How should the leaderboard display?</p>
+        </div>
+        <button class="fs-modal-close" (click)="closeFsModal()">✕</button>
+      </div>
+
+      <div class="fs-modal-options">
+
+        <!-- DETAILED CARD OPTION -->
+        <button class="fs-option-card" (click)="enterFullscreen('detailed')">
+          <div class="fso-preview detailed-preview">
+            <div class="fso-mini-card" *ngFor="let i of [1,2,3,4,5,6]">
+              <div class="fso-avatar"></div>
+              <div class="fso-lines">
+                <div class="fso-line long"></div>
+                <div class="fso-bar-row"><div class="fso-bar" style="width:70%;background:#8b5cf6"></div></div>
+                <div class="fso-bar-row"><div class="fso-bar" style="width:90%;background:#6366f1"></div></div>
+                <div class="fso-bar-row"><div class="fso-bar" style="width:55%;background:#06b6d4"></div></div>
+                <div class="fso-chips">
+                  <div class="fso-chip g"></div>
+                  <div class="fso-chip o"></div>
+                  <div class="fso-chip r"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="fso-label">
+            <span class="fso-title">📊 Detailed View</span>
+            <span class="fso-desc">Full breakdown — pillars, stats, difficulty per executive</span>
+          </div>
+        </button>
+
+        <!-- POSITIONING OPTION -->
+        <button class="fs-option-card" (click)="enterFullscreen('positioning')">
+          <div class="fso-preview positioning-preview">
+            <div class="fso-rank-row" *ngFor="let item of [
+              {rank:'👑',name:'Rohan Mehta',score:92,tier:'Elite',color:'#22c55e'},
+              {rank:'🥈',name:'Priya Shah',score:78,tier:'Strong',color:'#84cc16'},
+              {rank:'🥉',name:'Amit Verma',score:65,tier:'Developing',color:'#eab308'},
+              {rank:'#4',name:'Sara Ali',score:51,tier:'Needs Focus',color:'#f97316'},
+              {rank:'#5',name:'Dev Kumar',score:38,tier:'Critical',color:'#ef4444'}
+            ]">
+              <span class="fso-rk">{{ item.rank }}</span>
+              <span class="fso-rn">{{ item.name }}</span>
+              <span class="fso-rs" [style.color]="item.color">{{ item.score }}</span>
+              <span class="fso-rt" [style.color]="item.color">{{ item.tier }}</span>
+            </div>
+          </div>
+          <div class="fso-label">
+            <span class="fso-title">🏆 Positioning View</span>
+            <span class="fso-desc">Clean leaderboard rank — name, score, tier only</span>
+          </div>
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ NORMAL HEADER (hidden in fullscreen) -->
+  <div class="pd-hero" *ngIf="!isFullscreen">
+    <div class="pd-hero-bg"></div>
+    <div class="pd-hero-content">
+      <div class="pd-hero-left">
+        <div class="pd-hero-eyebrow"><span class="eyebrow-dot"></span>Executive Analytics</div>
+        <h1 class="pd-hero-title">Performance Dashboard</h1>
+        <p class="pd-hero-sub">Performance scoring across 4 performance pillars</p>
+      </div>
+      <div class="pd-hero-right">
+        <div class="period-group">
+          <button class="period-btn" [class.active]="activeFilter==='currentMonth'" (click)="loadCurrentMonthStats()">📅 This Month</button>
+          <button class="period-btn" [class.active]="activeFilter==='lastMonth'"    (click)="loadLastMonthStats()">Last Month</button>
+          <button class="period-btn" [class.active]="activeFilter==='currentYear'"  (click)="loadCurrentYearStats()">This Year</button>
+          <button class="period-btn" [class.active]="activeFilter==='lastYear'"     (click)="loadLastYearStats()">Last Year</button>
+        </div>
+        <div class="hero-actions">
+          <div class="custom-period">
+            <input type="month" [(ngModel)]="selectedMonth" class="month-pick" (change)="onCustomMonthChange()">
+            <button class="apply-btn" (click)="applyCustomFilter()" [disabled]="!selectedMonth">Apply</button>
+          </div>
+          <button class="fs-trigger-btn" (click)="openFsModal()" [disabled]="rankedAssignees.length === 0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+            Fullscreen
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="pillar-legend">
+      <div class="pl-item"><span class="pl-dot" style="background:#8b5cf6"></span>Permanence 40%</div>
+      <div class="pl-item"><span class="pl-dot" style="background:#6366f1"></span>Quality 30%</div>
+      <div class="pl-item"><span class="pl-dot" style="background:#06b6d4"></span>Deadlines 20%</div>
+      <div class="pl-item"><span class="pl-dot" style="background:#10b981"></span>Clearance 10%</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ FULLSCREEN VIEW -->
+  <div class="fs-view" *ngIf="isFullscreen && !isLoading && rankedAssignees.length > 0">
+
+    <!-- FS Topbar -->
+    <div class="fs-topbar">
+      <div class="fs-brand"><span class="fs-brand-dot"></span>Performance Leaderboard</div>
+      <div class="fs-period-pills">
+        <button class="period-btn sm" [class.active]="activeFilter==='currentMonth'" (click)="loadCurrentMonthStats()">This Month</button>
+        <button class="period-btn sm" [class.active]="activeFilter==='lastMonth'"    (click)="loadLastMonthStats()">Last Month</button>
+        <button class="period-btn sm" [class.active]="activeFilter==='currentYear'"  (click)="loadCurrentYearStats()">This Year</button>
+        <button class="period-btn sm" [class.active]="activeFilter==='lastYear'"     (click)="loadLastYearStats()">Last Year</button>
+      </div>
+      <!-- Mode toggle inside fullscreen -->
+      <div class="fs-mode-toggle">
+        <button class="fs-mode-btn" [class.active]="fsViewMode==='detailed'"    (click)="fsViewMode='detailed'">📊 Detailed</button>
+        <button class="fs-mode-btn" [class.active]="fsViewMode==='positioning'" (click)="fsViewMode='positioning'">🏆 Ranking</button>
+      </div>
+      <button class="fs-exit-btn" (click)="toggleFullscreen()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+        </svg>
+        Exit
+      </button>
+    </div>
+
+    <!-- ═══ DETAILED MODE ═══ -->
+    <div class="fs-board" *ngIf="fsViewMode === 'detailed'">
+      <div class="fs-card" *ngFor="let a of rankedAssignees; let i = index"
+           [class.fs-rank1]="i===0" [class.fs-rank2]="i===1" [class.fs-rank3]="i===2">
+        <div class="fs-rank-num">
+          <span *ngIf="i===0">👑</span><span *ngIf="i===1">🥈</span>
+          <span *ngIf="i===2">🥉</span><span *ngIf="i>2">#{{ i+1 }}</span>
+        </div>
+        <div class="fs-avatar-wrap">
+          <div class="fs-initial">{{ a.assigneeName.charAt(0).toUpperCase() }}</div>
+          <svg class="fs-ring" viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r="30" fill="none" stroke-width="4" stroke="rgba(139,92,246,0.15)"/>
+            <circle cx="36" cy="36" r="30" fill="none" stroke-width="4"
+                    [attr.stroke]="getScoreColor(a.score)" stroke-linecap="round"
+                    stroke-dasharray="188.5"
+                    [attr.stroke-dashoffset]="188.5 - (188.5 * a.score / 100)"
+                    transform="rotate(-90 36 36)"/>
+          </svg>
+        </div>
+        <div class="fs-dev-name">{{ a.assigneeName }}</div>
+        <div class="fs-tier tier-{{ getTierClass(a.scoreTier) }}">{{ a.tierIcon }} {{ a.scoreTier }}</div>
+        <div class="fs-score" [style.color]="getScoreColor(a.score)">{{ a.score }}</div>
+        <div class="fs-pillars">
+          <div class="fs-p"><div class="fs-pfill" [style.width.%]="a.p1Permanence" style="background:#8b5cf6"></div><span>{{ a.p1Permanence }}%</span></div>
+          <div class="fs-p"><div class="fs-pfill" [style.width.%]="a.p2Quality"    style="background:#6366f1"></div><span>{{ a.p2Quality }}%</span></div>
+          <div class="fs-p"><div class="fs-pfill" [style.width.%]="a.p3Deadline"   style="background:#06b6d4"></div><span>{{ a.p3Deadline }}%</span></div>
+          <div class="fs-p"><div class="fs-pfill" [style.width.%]="a.p4Clearance"  style="background:#10b981"></div><span>{{ a.p4Clearance }}%</span></div>
+        </div>
+        <div class="fs-stats">
+          <div class="fs-stat"        title="Stayed closed">🔒{{ a.totalStayedClosed }}</div>
+          <div class="fs-stat"        title="Closed">✅{{ a.totalTicketsClosed }}</div>
+          <div class="fs-stat warn"   title="Reworks">🔄{{ a.totalReworks }}</div>
+          <div class="fs-stat danger" title="Overdue">⏰{{ a.totalOverdue }}</div>
+          <div class="fs-stat muted"  title="Total">📋{{ a.totalTicketsCount }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ POSITIONING MODE — card grid, minimal info ═══ -->
+    <div class="fs-board fs-board--ranking" *ngIf="fsViewMode === 'positioning'">
+      <div class="fs-card fs-pos-card"
+           *ngFor="let a of rankedAssignees; let i = index"
+           [class.fs-rank1]="i===0" [class.fs-rank2]="i===1" [class.fs-rank3]="i===2">
+
+        <!-- Position -->
+        <div class="fps-rank">
+          <span *ngIf="i===0">👑</span>
+          <span *ngIf="i===1">🥈</span>
+          <span *ngIf="i===2">🥉</span>
+          <span *ngIf="i>2">#{{ i+1 }}</span>
+        </div>
+
+        <!-- Username -->
+        <div class="fps-name" [title]="a.assigneeName">{{ a.assigneeName }}</div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════ NORMAL VIEW -->
+  <ng-container *ngIf="!isFullscreen">
+    <div *ngIf="isLoading" class="pd-loading">
+      <div class="loading-orb">
+        <div class="orb-ring ring-1"></div>
+        <div class="orb-ring ring-2"></div>
+        <div class="orb-ring ring-3"></div>
+        <span class="orb-icon">📊</span>
+      </div>
+      <p>Crunching numbers…</p>
+    </div>
+    <div *ngIf="!isLoading && rankedAssignees.length === 0" class="pd-empty">
+      <div class="empty-icon">🔍</div>
+      <p>No activity found for this period.</p>
+    </div>
+
+    <ng-container *ngIf="!isLoading && rankedAssignees.length > 0">
+      
+
+      <!-- TOP 3 PODIUM -->
+      <section class="pd-section">
+        <div class="pd-section-label">
+          <div class="section-line"></div><span>Top Performers</span><div class="section-line"></div>
+        </div>
+        <div class="podium-row">
+          <div class="podium-slot slot-2" *ngIf="rankedAssignees.length > 1">
+            <div class="podium-medal silver">2</div>
+            <div class="podium-card">
+              <div class="pc-avatar" [style.background]="'linear-gradient(135deg,'+getScoreColor(rankedAssignees[1].score)+'99,'+getScoreColor(rankedAssignees[1].score)+'33)'">
+                <span>{{ rankedAssignees[1].assigneeName.charAt(0).toUpperCase() }}</span>
+              </div>
+              <div class="pc-name">{{ rankedAssignees[1].assigneeName }}</div>
+              <div class="pc-score" [style.color]="getScoreColor(rankedAssignees[1].score)">{{ rankedAssignees[1].score }}</div>
+              <div class="pc-tier tier-{{ getTierClass(rankedAssignees[1].scoreTier) }}">{{ rankedAssignees[1].tierIcon }} {{ rankedAssignees[1].scoreTier }}</div>
+            </div>
+            <div class="podium-plinth silver-plinth"></div>
+          </div>
+          <div class="podium-slot slot-1">
+            <div class="podium-crown">👑</div>
+            <div class="podium-medal gold">1</div>
+            <div class="podium-card featured">
+              <div class="pc-glow" [style.background]="getScoreColor(rankedAssignees[0].score)"></div>
+              <div class="pc-avatar large gold-avatar"><span>{{ rankedAssignees[0].assigneeName.charAt(0).toUpperCase() }}</span></div>
+              <div class="pc-name large">{{ rankedAssignees[0].assigneeName }}</div>
+              <div class="pc-score large" [style.color]="getScoreColor(rankedAssignees[0].score)">{{ rankedAssignees[0].score }}</div>
+              <div class="pc-tier tier-{{ getTierClass(rankedAssignees[0].scoreTier) }}">{{ rankedAssignees[0].tierIcon }} {{ rankedAssignees[0].scoreTier }}</div>
+            </div>
+            <div class="podium-plinth gold-plinth"></div>
+          </div>
+          <div class="podium-slot slot-3" *ngIf="rankedAssignees.length > 2">
+            <div class="podium-medal bronze">3</div>
+            <div class="podium-card">
+              <div class="pc-avatar" [style.background]="'linear-gradient(135deg,'+getScoreColor(rankedAssignees[2].score)+'99,'+getScoreColor(rankedAssignees[2].score)+'33)'">
+                <span>{{ rankedAssignees[2].assigneeName.charAt(0).toUpperCase() }}</span>
+              </div>
+              <div class="pc-name">{{ rankedAssignees[2].assigneeName }}</div>
+              <div class="pc-score" [style.color]="getScoreColor(rankedAssignees[2].score)">{{ rankedAssignees[2].score }}</div>
+              <div class="pc-tier tier-{{ getTierClass(rankedAssignees[2].scoreTier) }}">{{ rankedAssignees[2].tierIcon }} {{ rankedAssignees[2].scoreTier }}</div>
+            </div>
+            <div class="podium-plinth bronze-plinth"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DEV CARDS -->
+      <section class="pd-section">
+        <div class="pd-section-label">
+          <div class="section-line"></div><span>All Executives</span><div class="section-line"></div>
+        </div>
+        <div class="dev-grid">
+          <div class="dev-card" *ngFor="let a of rankedAssignees; let i = index">
+            <div class="rank-badge" [class.top3]="i < 3">#{{ i + 1 }}</div>
+            <div class="dc-header">
+              <div class="dc-avatar" [style.--score-color]="getScoreColor(a.score)">
+                <span class="dc-initial">{{ a.assigneeName.charAt(0).toUpperCase() }}</span>
+                <svg class="score-ring" viewBox="0 0 56 56">
+                  <circle cx="28" cy="28" r="24" fill="none" stroke="var(--border-workspace)" stroke-width="3"/>
+                  <circle cx="28" cy="28" r="24" fill="none" [attr.stroke]="getScoreColor(a.score)"
+                    stroke-width="3" stroke-linecap="round" stroke-dasharray="150.8"
+                    [attr.stroke-dashoffset]="150.8 - (150.8 * a.score / 100)"
+                    transform="rotate(-90 28 28)"/>
+                </svg>
+              </div>
+              <div class="dc-meta">
+                <div class="dc-name">{{ a.assigneeName }}</div>
+                <div class="dc-tier tier-{{ getTierClass(a.scoreTier) }}">{{ a.tierIcon }} {{ a.scoreTier }}</div>
+              </div>
+              <div class="dc-score-block">
+                <span class="dc-score-num" [style.color]="getScoreColor(a.score)">{{ a.score }}</span>
+                <span class="dc-score-label">score</span>
+              </div>
+            </div>
+            <div class="dc-pillars">
+              <div class="dp-row"><span class="dp-name">Permanence</span><div class="dp-track"><div class="dp-fill" [style.width.%]="a.p1Permanence" style="background:#8b5cf6"></div></div><span class="dp-val">{{ a.p1Permanence }}%</span><span class="dp-weight">+{{ a.w1 }}</span></div>
+              <div class="dp-row"><span class="dp-name">Quality</span><div class="dp-track"><div class="dp-fill" [style.width.%]="a.p2Quality" style="background:#6366f1"></div></div><span class="dp-val">{{ a.p2Quality }}%</span><span class="dp-weight">+{{ a.w2 }}</span></div>
+              <div class="dp-row"><span class="dp-name">Deadlines</span><div class="dp-track"><div class="dp-fill" [style.width.%]="a.p3Deadline" style="background:#06b6d4"></div></div><span class="dp-val">{{ a.p3Deadline }}%</span><span class="dp-weight">+{{ a.w3 }}</span></div>
+              <div class="dp-row"><span class="dp-name">Clearance</span><div class="dp-track"><div class="dp-fill" [style.width.%]="a.p4Clearance" style="background:#10b981"></div></div><span class="dp-val">{{ a.p4Clearance }}%</span><span class="dp-weight">+{{ a.w4 }}</span></div>
+            </div>
+            <div class="dc-chips">
+              <div class="chip chip-green"  title="Stayed closed">🔒 {{ a.totalStayedClosed }}</div>
+              <div class="chip chip-blue"   title="Closed">✅ {{ a.totalTicketsClosed }}</div>
+              <div class="chip chip-orange" title="Reworks">🔄 {{ a.totalReworks }}</div>
+              <div class="chip chip-red"    title="Overdue">⏰ {{ a.totalOverdue }}</div>
+              <div class="chip chip-purple" title="Open">📂 {{ a.totalTicketsOpen }}</div>
+              <div class="chip chip-gray"   title="Total">📋 {{ a.totalTicketsCount }}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COMPARISON TABLE -->
+      <section class="pd-section">
+        <div class="pd-section-label">
+          <div class="section-line"></div><span>Side-by-Side Comparison</span><div class="section-line"></div>
+        </div>
+        <div class="table-wrap">
+          <table class="cmp-table">
+            <thead>
+              <tr>
+                <th class="th-sticky" (click)="onSort('assigneeName')">Executive <span class="sort-icon">{{ sortIcon('assigneeName') }}</span></th>
+                <th (click)="onSort('score')">Score <span class="sort-icon">{{ sortIcon('score') }}</span></th>
+                <th (click)="onSort('p1Permanence')">Permanence <span class="sort-icon">{{ sortIcon('p1Permanence') }}</span></th>
+                <th (click)="onSort('p2Quality')">Quality <span class="sort-icon">{{ sortIcon('p2Quality') }}</span></th>
+                <th (click)="onSort('p3Deadline')">Deadlines <span class="sort-icon">{{ sortIcon('p3Deadline') }}</span></th>
+                <th (click)="onSort('p4Clearance')">Clearance <span class="sort-icon">{{ sortIcon('p4Clearance') }}</span></th>
+                <th (click)="onSort('totalTicketsClosed')">Closed <span class="sort-icon">{{ sortIcon('totalTicketsClosed') }}</span></th>
+                <th (click)="onSort('totalReworks')">Reworks <span class="sort-icon">{{ sortIcon('totalReworks') }}</span></th>
+                <th (click)="onSort('totalOverdue')">Overdue <span class="sort-icon">{{ sortIcon('totalOverdue') }}</span></th>
+                <th (click)="onSort('totalTicketsCount')">Total <span class="sort-icon">{{ sortIcon('totalTicketsCount') }}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a of rankedAssignees; let i = index" class="cmp-row">
+                <td class="th-sticky td-dev">
+                  <div class="td-dev-inner">
+                    <div class="td-av" [style.background]="getScoreColor(a.score)">{{ a.assigneeName.charAt(0) }}</div>
+                    <div><div class="td-name">{{ a.assigneeName }}</div><div class="td-rank">#{{ i + 1 }}</div></div>
+                  </div>
+                </td>
+                <td><div class="score-pill" [style.--c]="getScoreColor(a.score)">{{ a.score }}</div></td>
+                <td><div class="mini-bar-cell"><div class="mini-bar" [style.width.%]="a.p1Permanence" style="background:#8b5cf6"></div><span>{{ a.p1Permanence }}%</span></div></td>
+                <td><div class="mini-bar-cell"><div class="mini-bar" [style.width.%]="a.p2Quality"    style="background:#6366f1"></div><span>{{ a.p2Quality }}%</span></div></td>
+                <td><div class="mini-bar-cell"><div class="mini-bar" [style.width.%]="a.p3Deadline"   style="background:#06b6d4"></div><span>{{ a.p3Deadline }}%</span></div></td>
+                <td><div class="mini-bar-cell"><div class="mini-bar" [style.width.%]="a.p4Clearance"  style="background:#10b981"></div><span>{{ a.p4Clearance }}%</span></div></td>
+                <td class="td-num">{{ a.totalTicketsClosed }}</td>
+                <td class="td-num warn">{{ a.totalReworks }}</td>
+                <td class="td-num danger">{{ a.totalOverdue }}</td>
+                <td class="td-num muted">{{ a.totalTicketsCount }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+  </ng-container>
+</div>

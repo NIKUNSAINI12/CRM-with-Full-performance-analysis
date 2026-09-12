@@ -1,0 +1,612 @@
+<div class="ticket-detail-container">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading Ticket Details...</p>
+  </div>
+
+  <!-- Messages feedback -->
+  <div *ngIf="successMessage && !isLoading" class="success-message">
+    <p>{{ successMessage }}</p>
+  </div>
+  <div *ngIf="errorMessage && !isLoading" class="error-message">
+    <p>{{ errorMessage }}</p>
+    <button class="back-button" (click)="goBack()">Go Back</button>
+  </div>
+
+  <!-- Plane-style Issue Details Content -->
+  <div *ngIf="ticket && !isLoading" class="content-wrapper">
+    
+    <!-- Top breadcrumb & back bar -->
+    <header class="plane-top-bar">
+      <div class="bar-left">
+        <button class="back-link-btn" (click)="goBack()">
+          <span class="material-icons">arrow_back</span>
+          <span>Back to Dashboard</span>
+        </button>
+        <span class="bar-separator">/</span>
+        <span class="bar-project">{{ productName }}</span>
+        <!-- Parent chain in breadcrumb -->
+        <ng-container *ngIf="relations.parent">
+          <span class="bar-separator">/</span>
+          <button class="bar-parent-link" (click)="navigateToRelated(relations.parent.id)"
+                  [title]="relations.parent.subject">
+            📎 {{ relations.parent.ticketNumber }}
+          </button>
+        </ng-container>
+        <span class="bar-separator">/</span>
+        <span class="bar-issue-id">TKT-{{ ticket.id.toString().padStart(6, '0') }}</span>
+        <!-- Child badge -->
+        <span class="bar-child-badge" *ngIf="relations.children.length > 0"
+              [title]="closedChildrenCount + '/' + relations.children.length + ' children closed'">
+          {{ closedChildrenCount }}/{{ relations.children.length }} ✓
+        </span>
+      </div>
+      <div class="bar-right">
+        <span class="issue-date">Created on {{ ticket.createdOn | date:'dd MMM yyyy':'+0530' }}</span>
+      </div>
+    </header>
+
+    <!-- Main Workspace Layout Grid -->
+    <div class="details-grid">
+      
+      <!-- LEFT: Primary Content Area (Title, Description, Attachments, Feed Stream) -->
+      <section class="main-details">
+        
+        <!-- Editable-style Title Header -->
+        <div class="issue-title-block">
+          <span class="issue-prefix-id">TKT-{{ ticket.id.toString().padStart(6, '0') }}</span>
+          <h1>{{ ticket.subject }}</h1>
+        </div>
+
+        <!-- Meta Client & Product Path -->
+        <div class="issue-meta-info-row">
+          <span class="meta-info-item">
+            <span class="material-icons">corporate_fare</span>
+            <span>{{ customerName }}</span>
+          </span>
+          <span class="meta-info-separator">•</span>
+          <span class="meta-info-item">
+            <span class="material-icons">category</span>
+            <span>{{ productName }}</span>
+          </span>
+          <span class="meta-info-separator">•</span>
+          <span class="meta-info-item">
+            <span class="material-icons">event</span>
+            <span>{{ ticket.createdOn | date:'dd-MMM-yyyy h:mm a':'+0530' }}</span>
+          </span>
+        </div>
+
+        <!-- Description Section -->
+        <div class="plane-issue-section">
+          <h2 class="section-title">Description</h2>
+          <div class="issue-description-box">
+            <p style="white-space: pre-wrap;">{{ ticket.description || 'No description provided.' }}</p>
+          </div>
+        </div>
+
+        <!-- Inline File Attachments Row (Borderless Tags) -->
+        <div class="plane-issue-section" *ngIf="ticket.attachments && ticket.attachments.length > 0">
+          <h2 class="section-title">Attachments ({{ ticket.attachments.length }})</h2>
+          <div class="plane-attachments-pills">
+            <div *ngFor="let att of ticket.attachments" class="attachment-pill">
+              <span class="material-icons pill-icon">attach_file</span>
+              <span class="pill-name" [title]="att.fileName">{{ att.fileName }}</span>
+              <button class="pill-download" (click)="downloadAttachment(att, undefined)" title="Download file">
+                <span class="material-icons">download</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plane.so Sleek Tabbed Workspace Feed (Chronological Streams) -->
+        <div class="plane-workspace-tabs-container">
+          <div class="workspace-tabs-header">
+            <button class="ws-tab-btn" [class.active]="activeTab === 'developer'" (click)="selectTab('developer')">
+              <span class="material-icons">terminal</span>
+              <span>Internal Log & Notes ({{ allDeveloperComms.length }})</span>
+            </button>
+            <button class="ws-tab-btn" [class.active]="activeTab === 'timeline'" (click)="selectTab('timeline')">
+              <span class="material-icons">history</span>
+              <span>History ({{ ticketHistory.length }})</span>
+            </button>
+            <button class="ws-tab-btn" [class.active]="activeTab === 'relations'" (click)="selectTab('relations')">
+              <span class="material-icons">hub</span>
+              <span>Relations Map ({{ relations.children.length + (relations.parent ? 1 : 0) }})</span>
+            </button>
+          </div>
+
+          <!-- Feed Content Box -->
+          <div class="workspace-feed-content">
+            <div *ngIf="commsErrorMessage" class="error-message">
+              {{ commsErrorMessage }}
+            </div>
+
+            <!-- TAB 1: INTERNAL LOGS & NOTES -->
+            <div *ngIf="activeTab === 'developer'" class="ws-feed-pane">
+              <div class="chat-thread">
+                <div *ngIf="allDeveloperComms.length === 0" class="no-comments">
+                  <span class="material-icons">code</span>
+                  <p>No internal notes or dev logs posted for this ticket yet.</p>
+                </div>
+                
+                <div *ngFor="let comm of allDeveloperComms" class="chat-bubble"
+                     [class.is-note]="isNote(comm)"
+                     [class.bubble-right]="comm.postedByUserRole === 'PM'"
+                     [class.bubble-left]="comm.postedByUserRole !== 'PM'">
+                  <div class="bubble-avatar">
+                    {{ (comm.postedByName || '?').charAt(0).toUpperCase() }}
+                  </div>
+                  <div class="bubble-body">
+                    <div class="bubble-meta">
+                      <span class="bubble-author">{{ comm.postedByName }} <span class="role-badge">{{ comm.postedByUserRole }}</span></span>
+                      <span *ngIf="isNote(comm)" class="role-badge px-2" style="background: rgba(139, 92, 246, 0.15); color: var(--color-brand-primary);">Internal Note</span>
+                      <span class="bubble-time">{{ comm.postedOn | date:'dd MMM yyyy, h:mm a':'+0530' }}</span>
+                    </div>
+                    <div class="bubble-text">{{ comm.commentText }}</div>
+                    
+                    <!-- Comment Attachments -->
+                    <div *ngIf="comm.attachments && comm.attachments.length > 0" class="bubble-attachments-pills">
+                      <a *ngFor="let att of comm.attachments" (click)="downloadAttachment(att, comm.id)" class="attachment-pill-mini">
+                        <span class="material-icons">insert_drive_file</span>
+                        <span>{{ att.fileName }}</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bottom Chat Composer for Dev Note Dispatcher -->
+              <div class="chat-input-bar">
+                <form [formGroup]="newNoteForm" (ngSubmit)="postNote()">
+                  <div class="chat-input-row">
+                    <textarea formControlName="noteText"
+                              class="chat-textarea"
+                              placeholder="Write a technical note or progress log for this ticket..."
+                              rows="2">
+                    </textarea>
+                    
+                    <div class="chat-actions">
+                      <label for="noteFilesDev" class="attach-label" title="Attach file(s)">
+                        <span class="material-icons">attach_file</span>
+                        <input type="file" id="noteFilesDev" multiple (change)="onNoteFileSelected($event)" style="display: none;">
+                      </label>
+                      <button type="submit" class="send-btn"
+                              [disabled]="isSubmittingNote || (!newNoteForm.value.noteText?.trim() && selectedNoteFiles.length === 0)">
+                        <span>{{ isSubmittingNote ? 'Posting...' : 'Dispatch Note' }}</span>
+                        <span class="material-icons">send</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Selected uploads preview -->
+                  <div *ngIf="selectedNoteFiles.length > 0" class="selected-files-preview">
+                    <span *ngFor="let file of selectedNoteFiles; let i = index" class="file-chip">
+                      <span class="material-icons">description</span>
+                      <span class="chip-name">{{ file.name }}</span>
+                      <button type="button" (click)="removeSelectedNoteFile(i)" class="remove-chip">×</button>
+                    </span>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- TAB 2: STATE HISTORY (TIMELINE LOG) -->
+            <div *ngIf="activeTab === 'timeline'" class="ws-feed-pane">
+              
+              <!-- Time breakdown – user-wise grouped view -->
+              <div class="breakdown-section mb-4" *ngIf="userWiseBreakdown && userWiseBreakdown.length > 0">
+                <h4 class="ws-timeline-section-title">⏱ Time Breakdown by User</h4>
+
+                <div class="user-wise-breakdown">
+                  <ng-container *ngFor="let group of userWiseBreakdown">
+
+                    <!-- ──── PM Card ──── -->
+                    <div class="uwb-card uwb-pm clickable" *ngIf="group.category === 'PM'" (click)="toggleGroup(group)">
+                      <div class="uwb-card-header">
+                        <div class="uwb-avatar uwb-avatar-pm">
+                          <span class="material-icons">manage_accounts</span>
+                        </div>
+                        <div class="uwb-header-info">
+                          <span class="uwb-role-tag uwb-role-pm">PM</span>
+                          <span class="uwb-name">Project Manager</span>
+                        </div>
+                        <div class="uwb-total-time">{{ formatMinutes(group.totalMinutes) }}</div>
+                        <span class="material-icons uwb-chevron">{{ group.expanded ? 'expand_less' : 'expand_more' }}</span>
+                      </div>
+                      <!-- Progress bar -->
+                      <div class="uwb-progress-track">
+                        <div class="uwb-progress-fill uwb-fill-pm"
+                             [style.width]="getTimelinePct(group.totalMinutes) + '%'"></div>
+                      </div>
+                      <!-- Sub-state pills (visible when expanded) -->
+                      <div class="uwb-sub-items" *ngIf="group.expanded && group.subItems.length > 0" (click)="$event.stopPropagation()">
+                        <span class="uwb-sub-pill uwb-sub-pm" *ngFor="let sub of group.subItems">
+                          {{ sub.label }}: <strong>{{ formatMinutes(sub.minutes) }}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- ──── Assignee Card ──── -->
+                    <div class="uwb-card uwb-assignee clickable" *ngIf="group.category === 'Assignee'" (click)="toggleGroup(group)">
+                      <div class="uwb-card-header">
+                        <div class="uwb-avatar uwb-avatar-dev">
+                          <span class="material-icons">people</span>
+                        </div>
+                        <div class="uwb-header-info">
+                          <span class="uwb-role-tag uwb-role-dev">Executive</span>
+                          <span class="uwb-name">Executives</span>
+                        </div>
+                        <div class="uwb-total-time">{{ formatMinutes(group.totalMinutes) }}</div>
+                        <span class="material-icons uwb-chevron">{{ group.expanded ? 'expand_less' : 'expand_more' }}</span>
+                      </div>
+                      <!-- Progress bar -->
+                      <div class="uwb-progress-track">
+                        <div class="uwb-progress-fill uwb-fill-dev"
+                             [style.width]="getTimelinePct(group.totalMinutes) + '%'"></div>
+                      </div>
+                      <!-- Sub-type pills: Individual named assignees (visible when expanded) -->
+                      <div class="uwb-sub-items" *ngIf="group.expanded && group.subItems.length > 0" (click)="$event.stopPropagation()">
+                        <span class="uwb-sub-pill uwb-sub-dev" *ngFor="let sub of group.subItems">
+                          👤 {{ sub.label }}: <strong>{{ formatMinutes(sub.minutes) }}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- ──── On Hold Card ──── -->
+                    <div class="uwb-card uwb-onhold" *ngIf="group.category === 'OnHold'">
+                      <div class="uwb-card-header">
+                        <div class="uwb-avatar uwb-avatar-hold">
+                          <span class="material-icons">pause_circle</span>
+                        </div>
+                        <div class="uwb-header-info">
+                          <span class="uwb-role-tag uwb-role-hold">On Hold</span>
+                          <span class="uwb-name">Ticket Paused</span>
+                        </div>
+                        <div class="uwb-total-time">{{ formatMinutes(group.totalMinutes) }}</div>
+                      </div>
+                      <div class="uwb-progress-track">
+                        <div class="uwb-progress-fill uwb-fill-hold"
+                             [style.width]="getTimelinePct(group.totalMinutes) + '%'"></div>
+                      </div>
+                    </div>
+
+                  </ng-container>
+                </div>
+
+                <!-- Total bar -->
+                <div class="uwb-total-row">
+                  <span class="uwb-total-label">Total Active Time</span>
+                  <span class="uwb-total-value">{{ formatMinutes(totalTimelineMinutes) }}</span>
+                </div>
+              </div>
+
+              <div class="timeline-visualization">
+                <h4 class="ws-timeline-section-title">History Progression Log</h4>
+                
+                <div class="timeline-container">
+                  <div class="timeline-line"></div>
+                  <div *ngIf="!ticketHistory || ticketHistory.length === 0" class="no-history">
+                    <p>No history entries found for this ticket.</p>
+                  </div>
+                  
+                  <div *ngFor="let entry of ticketHistory" class="timeline-item completed">
+                    <div class="timeline-marker">
+                      <div class="marker-dot"></div>
+                    </div>
+                    <div class="timeline-content">
+                      <div class="timeline-badge text-xs" [ngClass]="{
+                         'open': entry.eventDescription.includes('Created') || entry.eventDescription.includes('Open'),
+                         'work-done': entry.eventDescription.includes('Work Done'),
+                         'pending': entry.eventDescription.includes('Pending'),
+                         'closed': entry.eventDescription.includes('Closed'),
+                         'rework': entry.eventDescription.includes('Rework')
+                       }">
+                        {{ entry.changeDate | date:'dd MMM yyyy, h:mm a':'+0530' }}
+                      </div>
+                      <div class="timeline-description">
+                        <strong>{{ entry.changedByUserName || (entry.changedByUserRole) }} ({{ entry.changedByUserRole }})</strong>:
+                        {{ entry.eventDescription }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB 3: RELATIONS MAP -->
+            <div *ngIf="activeTab === 'relations'" class="ws-feed-pane">
+              <div class="relations-map-wrapper">
+                
+                <!-- Map Header & Summary Row -->
+                <div class="map-summary-bar">
+                  <div class="msb-info">
+                    <h4>Hierarchical Task Tree</h4>
+                    <p>Track dependencies, epic linkages, and subtask completion state.</p>
+                  </div>
+                  <div class="msb-stats" *ngIf="relations.children.length > 0">
+                    <div class="msb-stat-item">
+                      <span class="msb-stat-num">{{ closedChildrenCount }}</span>
+                      <span class="msb-stat-lbl">Closed</span>
+                    </div>
+                    <div class="msb-stat-item">
+                      <span class="msb-stat-num text-brand">{{ openChildrenCount }}</span>
+                      <span class="msb-stat-lbl">Active</span>
+                    </div>
+                    <div class="msb-stat-item">
+                      <span class="msb-stat-num">{{ childCompletionPct }}%</span>
+                      <span class="msb-stat-lbl">Complete</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Visual Tree Area -->
+                <div class="relations-tree-container" *ngIf="relationTreeRoot.length > 0">
+                  <div *ngFor="let rootNode of relationTreeRoot">
+                    <ng-container *ngTemplateOutlet="treeNodeTemplate; context: { node: rootNode }"></ng-container>
+                  </div>
+                </div>
+
+                <!-- Empty State -->
+                <div class="tree-node-placeholder" 
+                     *ngIf="relationTreeRoot.length === 0 && !isLoadingRelations"
+                     style="background: rgba(255,255,255,0.015); border: 1px dashed rgba(255,255,255,0.08); padding: 1.5rem; text-align: center; border-radius: 8px;">
+                  <span class="material-icons placeholder-icon" style="font-size: 24px; display: block; margin-bottom: 0.5rem;">hub</span>
+                  <div class="placeholder-text">
+                    <h5 style="margin: 0 0 0.25rem 0; font-size: 0.85rem; font-weight: 600;">No Relations Established</h5>
+                    <p style="margin: 0; font-size: 0.72rem; color: var(--text-muted);">This ticket has no parent or child relationships.</p>
+                  </div>
+                </div>
+
+                <!-- Recursive Tree Template -->
+                <ng-template #treeNodeTemplate let-node="node">
+                  <div class="tree-node-wrapper" [class.current-node]="node.isCurrent">
+                    <div class="rel-ticket-card" 
+                         [class.parent-card]="node.ticket.id === relations.parent?.id"
+                         [class.active-card]="node.isCurrent"
+                         (click)="navigateToRelated(node.ticket.id)">
+                      <div class="rtc-top">
+                        <span class="rtc-num">{{ node.ticket.ticketNumber }}</span>
+                        <span class="rtc-status" [style.background]="getStatusColor(node.ticket.status) + '22'"
+                              [style.color]="getStatusColor(node.ticket.status)">{{ node.ticket.status }}</span>
+                        <span class="current-badge" *ngIf="node.isCurrent">Current</span>
+                      </div>
+                      <div class="rtc-subject">{{ node.ticket.subject }}</div>
+                      <div class="rtc-meta">
+                        <span class="rtc-priority priority-{{ node.ticket.priority | lowercase }}">{{ node.ticket.priority }}</span>
+                        <span class="rtc-assignee" *ngIf="node.ticket.assignedToName">👤 {{ node.ticket.assignedToName }}</span>
+                        <span class="rtc-difficulty" *ngIf="node.ticket.difficulty">⚡ {{ node.ticket.difficulty }}</span>
+                      </div>
+                      <div class="rtc-arrow">↗</div>
+                    </div>
+                    
+                    <!-- Render children recursively -->
+                    <div class="tree-children-container" *ngIf="node.children && node.children.length > 0">
+                      <div class="tree-child-branch" *ngFor="let childNode of node.children">
+                        <ng-container *ngTemplateOutlet="treeNodeTemplate; context: { node: childNode }"></ng-container>
+                      </div>
+                    </div>
+                  </div>
+                </ng-template>
+
+                </div>
+              </div>
+            </div>
+          </div>
+
+      </section>
+
+      <!-- RIGHT: Properties Panel Sidebar (Submission box, Information list) -->
+      <aside class="sidebar">
+        
+        <!-- Submit to Review Card -->
+        <div class="sidebar-meta-panel mb-4">
+          <h3 class="sidebar-title">PM Dispatch Desk</h3>
+          <div class="sidebar-dispatch-card">
+            <div *ngIf="ticketDeadline" class="deadline-indicator">
+              <span class="material-icons">event</span>
+              <span>Deadline: <strong>{{ ticketDeadline.deadlineDate | date:'dd-MMM-yyyy':'+0530' }}</strong></span>
+            </div>
+            
+            <p class="dispatch-help-text mt-2">When all task checkpoints are done, dispatch the ticket back to the Project Manager for formal reviews.</p>
+            
+            <!-- Dropdown to select developer status -->
+            <div *ngIf="!isUpdateLocked" class="status-select-wrapper mt-3 mb-3">
+              <label for="devStatusSelect" class="text-xs text-brand-text-400 block mb-1 font-medium">Choose Status:</label>
+              <select id="devStatusSelect" 
+                      [(ngModel)]="selectedDevStatus"
+                      class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded-md text-xs text-brand-text-100 p-2.5 outline-none focus:border-brand-primary transition cursor-pointer">
+                <option *ngFor="let opt of devStatusOptions" [value]="opt">{{ opt }}</option>
+              </select>
+            </div>
+
+            <!-- Optional status update note -->
+            <div *ngIf="!isUpdateLocked" class="status-note-wrapper mt-3 mb-3">
+              <label for="statusUpdateNote" class="text-xs text-brand-text-400 block mb-1 font-medium">Add note with status update (Optional):</label>
+              <textarea id="statusUpdateNote" 
+                        [(ngModel)]="statusUpdateNote" 
+                        class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded-md px-2.5 py-1.5 text-xs text-brand-text-100 outline-none focus:border-brand-primary transition" 
+                        style="resize: none;"
+                        rows="2" 
+                        placeholder="Provide details about your progress..."></textarea>
+            </div>
+            
+            <!-- Update Status Button -->
+            <button *ngIf="!isUpdateLocked"
+                    class="save-button w-full" 
+                    style="background: var(--color-brand-primary, #8b5cf6); border-color: var(--color-brand-primary, #8b5cf6);" 
+                    (click)="updateStatusByDeveloper()">
+              <span class="material-icons text-sm">
+                {{ selectedDevStatus === 'Work Done' ? 'rocket_launch' : 'check_circle' }}
+              </span>
+              <span>
+                {{ selectedDevStatus === 'Work Done' ? 'Mark Work Done' : 'Update Status' }}
+              </span>
+            </button>
+            
+            <div *ngIf="isUpdateLocked" class="locked-indicator mt-2">
+              <span class="material-icons text-xs">lock</span>
+              <span>Locked: Status is {{ ticket.status }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Information details list -->
+        <div class="sidebar-meta-panel mt-4">
+          <h3 class="sidebar-title">Properties</h3>
+          
+          <div class="horizontal-update-form">
+            <div class="form-field">
+              <label>Customer</label>
+              <span class="form-static-value">{{ customerName }}</span>
+            </div>
+            
+            <div class="form-field">
+              <label>Product</label>
+              <span class="form-static-value">{{ productName }}</span>
+            </div>
+
+            <div class="form-field" *ngIf="ticket.sprintName">
+              <label>Sprint</label>
+              <span class="form-static-value text-amber-500 font-semibold">{{ ticket.sprintName }}</span>
+            </div>
+            
+            <div class="form-field">
+              <label>Created On</label>
+              <span class="form-static-value">{{ ticket.createdOn | date:'dd-MMM-yyyy h:mm a':'+0530' }}</span>
+            </div>
+
+            <div class="form-field">
+              <label>Priority</label>
+              <div class="select-wrapper" *ngIf="canUpdatePriority; else staticPriority">
+                <select [(ngModel)]="selectedPriority" (change)="onPropertyChange()" class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded-md text-xs text-brand-text-100 p-1.5 outline-none focus:border-brand-primary transition cursor-pointer">
+                  <option *ngFor="let p of priorityOptions" [value]="p">{{ p }}</option>
+                </select>
+              </div>
+              <ng-template #staticPriority>
+                <span class="form-static-value">{{ ticket.priority }}</span>
+              </ng-template>
+            </div>
+
+            <div class="form-field">
+              <label>Difficulty</label>
+              <div class="select-wrapper" *ngIf="canUpdateDifficulty; else staticDifficulty">
+                <select [(ngModel)]="selectedDifficulty" (change)="onPropertyChange()" class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded-md text-xs text-brand-text-100 p-1.5 outline-none focus:border-brand-primary transition cursor-pointer">
+                  <option *ngFor="let d of difficultyOptions" [value]="d.id">{{ d.label }}</option>
+                </select>
+              </div>
+              <ng-template #staticDifficulty>
+                <span class="form-static-value">{{ ticket.difficulty || 'Medium' }}</span>
+              </ng-template>
+            </div>
+            
+            <div class="form-field">
+              <label>Deadline Date</label>
+              <div class="date-input-wrapper" *ngIf="canUpdateDeadline; else staticDeadline" style="max-width: 220px; width: 100%;">
+                <input type="datetime-local" [(ngModel)]="selectedDeadline" (change)="onPropertyChange()" class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded-md text-xs text-brand-text-100 p-1.5 outline-none focus:border-brand-primary transition" style="color: var(--text-high, #f1f5f9);">
+              </div>
+              <ng-template #staticDeadline>
+                <span class="form-static-value">{{ (ticketDeadline?.deadlineDate | date:'dd-MMM-yyyy':'+0530') || 'No Deadline Set' }}</span>
+              </ng-template>
+            </div>
+            
+            <div class="form-field">
+              <label>Last Updated</label>
+              <span class="form-static-value">{{ ticket.lastRepliedOn | date:'dd-MMM-yyyy h:mm a':'+0530' }}</span>
+            </div>
+          </div>
+
+          <div class="sidebar-save-actions mt-4 pt-2" *ngIf="showPropertiesSave">
+            <button class="save-button w-full" (click)="saveProperties()">
+              Save Properties
+            </button>
+          </div>
+        </div>
+        <!-- READ-ONLY Relations Panel for Developer -->
+        <div class="sidebar-relations mt-4">
+          <h3 class="sidebar-title">
+            🔗 Ticket Chain
+            <span class="relations-loader" *ngIf="isLoadingRelations">&#x27F3;</span>
+          </h3>
+
+          <p *ngIf="relationsError" class="rel-error">{{ relationsError }}</p>
+
+          <!-- PARENT -->
+          <div class="rel-section">
+            <div class="rel-section-header">
+              <span class="rel-label">⬆️ Parent Ticket</span>
+            </div>
+            <div class="rel-empty" *ngIf="!relations.parent && !isLoadingRelations">
+              No parent — this is a root ticket
+            </div>
+            <div class="rel-ticket-card parent-card" *ngIf="relations.parent"
+                 (click)="navigateToRelated(relations.parent.id)">
+              <div class="rtc-top">
+                <span class="rtc-num">{{ relations.parent.ticketNumber }}</span>
+                <span class="rtc-status"
+                      [style.background]="getStatusColor(relations.parent.status) + '22'"
+                      [style.color]="getStatusColor(relations.parent.status)">
+                  {{ relations.parent.status }}
+                </span>
+              </div>
+              <div class="rtc-subject">{{ relations.parent.subject }}</div>
+              <div class="rtc-meta">
+                <span class="rtc-priority priority-{{ relations.parent.priority | lowercase }}">{{ relations.parent.priority }}</span>
+                <span class="rtc-assignee" *ngIf="relations.parent.assignedToName">👤 {{ relations.parent.assignedToName }}</span>
+              </div>
+              <div class="rtc-arrow">↗</div>
+            </div>
+          </div>
+
+          <!-- CHILDREN -->
+          <div class="rel-section mt-3">
+            <div class="rel-section-header">
+              <span class="rel-label">⬇️ Child Tickets ({{ relations.children.length }})</span>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="child-progress-bar-wrap" *ngIf="relations.children.length > 0">
+              <div class="child-progress-label">
+                <span>{{ closedChildrenCount }}/{{ relations.children.length }} closed</span>
+                <span class="child-progress-pct">{{ childCompletionPct }}%</span>
+              </div>
+              <div class="child-progress-track">
+                <div class="child-progress-fill"
+                     [style.width]="childCompletionPct + '%'"
+                     [class.complete]="childCompletionPct === 100">
+                </div>
+              </div>
+            </div>
+
+            <div class="rel-empty" *ngIf="relations.children.length === 0 && !isLoadingRelations">
+              No child tickets
+            </div>
+
+            <div class="rel-ticket-card" *ngFor="let child of relations.children"
+                 (click)="navigateToRelated(child.id)">
+              <div class="rtc-top">
+                <span class="rtc-num">{{ child.ticketNumber }}</span>
+                <span class="rtc-status"
+                      [style.background]="getStatusColor(child.status) + '22'"
+                      [style.color]="getStatusColor(child.status)">
+                  {{ child.status }}
+                </span>
+              </div>
+              <div class="rtc-subject">{{ child.subject }}</div>
+              <div class="rtc-meta">
+                <span class="rtc-priority priority-{{ child.priority | lowercase }}">{{ child.priority }}</span>
+                <span class="rtc-difficulty">⚡ {{ child.difficulty }}</span>
+              </div>
+              <div class="rtc-arrow">↗</div>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+    </div>
+  </div>
+
+
+
+</div>

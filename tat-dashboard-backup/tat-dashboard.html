@@ -1,0 +1,481 @@
+<div class="space-y-5 animate-in">
+
+  <!-- Dashboard Header -->
+  <div class="flex items-center justify-between pb-3 border-b border-brand-dark-800">
+    <div>
+      <h1 class="text-lg font-bold text-brand-text-100 tracking-tight">TAT Dashboard</h1>
+      <p class="text-xs text-brand-text-400 mt-0.5">Track SLA compliance and turnaround performance metrics</p>
+    </div>
+    
+    <div class="flex items-center gap-2">
+      <!-- Toggle Filters Button -->
+      <button (click)="toggleFilters()" 
+              class="px-2.5 py-1.5 bg-brand-dark-900 border border-brand-dark-800 hover:border-brand-dark-700 text-xs font-semibold rounded-md text-brand-text-300 hover:text-brand-text-100 flex items-center gap-1.5 transition cursor-pointer select-none">
+        <span class="material-icons text-sm">filter_list</span>
+        {{ showFilters ? 'Hide Filters' : 'Filters' }}
+      </button>
+      <button (click)="clearFilters()" [disabled]="isLoading" 
+              class="px-2.5 py-1.5 bg-brand-dark-900 border border-brand-dark-800 hover:border-brand-dark-700 text-xs font-semibold rounded-md text-brand-text-300 hover:text-brand-text-100 transition cursor-pointer select-none">
+        Clear
+      </button>
+      <button (click)="loadStats()" [disabled]="isLoading" 
+              class="px-3 py-1.5 bg-brand-primary hover:bg-brand-primary/90 text-white text-xs font-semibold rounded-md flex items-center gap-1.5 transition cursor-pointer select-none shadow-sm shadow-brand-primary/20">
+        <span class="material-icons text-xs" [class.animate-spin]="isLoading">refresh</span>
+        Apply
+      </button>
+    </div>
+  </div>
+
+  <!-- Collapsible Filter Bar -->
+  <div *ngIf="showFilters" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-brand-dark-900 p-3 rounded-lg border border-brand-dark-800 animate-in">
+    <div class="flex flex-col gap-1" *ngIf="!isAssignee">
+      <span class="text-[10px] font-semibold text-brand-text-400 uppercase tracking-wider font-mono">Relationship</span>
+      <select [(ngModel)]="filterRelationship" (change)="loadStats()" 
+              class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded px-2 py-1 text-xs text-brand-text-100 focus:outline-none focus:border-brand-primary/50 transition">
+        <option value="">All Tickets</option>
+        <option value="AssignedToMe">Assigned to Me</option>
+        <option value="CreatedByMe">Created by Me</option>
+        <option value="AssignedToJuniors">Assigned to My Juniors</option>
+      </select>
+    </div>
+    <div class="flex flex-col gap-1">
+      <span class="text-[10px] font-semibold text-brand-text-400 uppercase tracking-wider font-mono">Status</span>
+      <select [(ngModel)]="filterStatus" (change)="loadStats()" 
+              class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded px-2 py-1 text-xs text-brand-text-100 focus:outline-none focus:border-brand-primary/50 transition">
+        <option value="">All Statuses</option>
+        <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+      </select>
+    </div>
+    <div class="flex flex-col gap-1">
+      <span class="text-[10px] font-semibold text-brand-text-400 uppercase tracking-wider font-mono">From Date</span>
+      <input type="date" [(ngModel)]="filterFromDate" (change)="loadStats()" 
+             class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded px-2 py-1 text-xs text-brand-text-100 focus:outline-none focus:border-brand-primary/50 transition [color-scheme:dark]">
+    </div>
+    <div class="flex flex-col gap-1">
+      <span class="text-[10px] font-semibold text-brand-text-400 uppercase tracking-wider font-mono">To Date</span>
+      <input type="date" [(ngModel)]="filterToDate" (change)="loadStats()" 
+             class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded px-2 py-1 text-xs text-brand-text-100 focus:outline-none focus:border-brand-primary/50 transition [color-scheme:dark]">
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-16 gap-3">
+    <div class="w-7 h-7 rounded-full border-2 border-brand-primary/20 border-t-brand-primary animate-spin"></div>
+    <span class="text-xs text-brand-text-400 font-mono">Calculating TAT SLA stats...</span>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage" class="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded">
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="!isLoading && stats">
+    <!-- Top Row KPI Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
+      <!-- Total Active Tickets -->
+      <div class="p-4 bg-brand-dark-900 border border-brand-dark-800 rounded-xl hover:border-brand-dark-700 transition duration-150">
+        <div class="text-[10px] font-bold text-brand-text-400 uppercase tracking-wider font-mono">Active Tickets</div>
+        <div class="text-2xl font-semibold text-brand-text-100 mt-1 font-mono leading-none">{{ stats.totalActiveTickets }}</div>
+      </div>
+      
+      <!-- Open Tickets -->
+      <div class="p-4 bg-brand-dark-900 border border-brand-dark-800 rounded-xl hover:border-brand-dark-700 transition duration-150">
+        <div class="text-[10px] font-bold text-brand-text-400 uppercase tracking-wider font-mono">Open Tickets</div>
+        <div class="text-2xl font-semibold text-brand-text-100 mt-1 font-mono leading-none">{{ stats.openTickets }}</div>
+      </div>
+      
+      <!-- In Progress -->
+      <div class="p-4 bg-brand-dark-900 border border-brand-dark-800 rounded-xl hover:border-brand-dark-700 transition duration-150">
+        <div class="text-[10px] font-bold text-brand-text-400 uppercase tracking-wider font-mono">In Progress</div>
+        <div class="text-2xl font-semibold text-brand-text-100 mt-1 font-mono leading-none">{{ stats.inProgressTickets }}</div>
+      </div>
+
+      <!-- SLA Compliance -->
+      <div class="p-4 bg-brand-dark-900 border border-brand-dark-800 rounded-xl hover:border-brand-dark-700 transition duration-150">
+        <div class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider font-mono">SLA Compliance</div>
+        <div class="text-2xl font-semibold text-emerald-400 mt-1 font-mono leading-none">{{ stats.slaCompliancePercent }}%</div>
+      </div>
+
+      <!-- Average Resolution Time -->
+      <div class="p-4 bg-brand-dark-900 border border-brand-dark-800 rounded-xl hover:border-brand-dark-700 transition duration-150">
+        <div class="text-[10px] font-bold text-purple-400 uppercase tracking-wider font-mono">Avg Resolution</div>
+        <div class="text-2xl font-semibold text-purple-400 mt-1 font-mono leading-none">{{ stats.averageResolutionTime }} hrs</div>
+      </div>
+    </div>
+
+    <!-- Charts Row 1: Volume Allocation & Trend -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      
+      <!-- Donut Chart Widget -->
+      <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl p-4.5 flex flex-col justify-between hover:border-brand-dark-700 transition duration-150">
+        <div class="flex items-center justify-between border-b border-brand-dark-800/60 pb-2 mb-3">
+          <h4 class="text-[10px] font-bold text-brand-text-100 uppercase tracking-wider flex items-center gap-1.5">
+            📊 Volume Allocation
+          </h4>
+          <div class="flex items-center gap-1">
+            <select [(ngModel)]="donutConfig.priority" (change)="applyLocalFilters()" 
+                    class="bg-brand-dark-950 border border-brand-dark-800 rounded px-2 py-0.5 text-[9px] font-bold text-brand-text-300 focus:outline-none">
+              <option value="All">All Priority</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+            <select [(ngModel)]="donutConfig.timeRange" (change)="applyLocalFilters()" 
+                    class="bg-brand-dark-950 border border-brand-dark-800 rounded px-2 py-0.5 text-[9px] font-bold text-brand-text-300 focus:outline-none">
+              <option value="All">All Time</option>
+              <option value="7d">7 Days</option>
+              <option value="30d">30 Days</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-2">
+          <div class="space-y-2 flex-1">
+            <div>
+              <span class="text-[9px] text-brand-text-400 font-mono uppercase tracking-wider">Filtered Volume</span>
+              <div class="text-2xl font-bold text-brand-text-100 font-mono mt-0.5 leading-none">{{ filteredDonutData.total }}</div>
+            </div>
+            <div class="space-y-1 text-xs">
+              <div (click)="setDrillDown('status', 'active')" 
+                   [class.bg-brand-dark-950/60]="drillDownFilter?.key === 'status' && drillDownFilter?.value === 'active'"
+                   class="flex items-center justify-between cursor-pointer hover:bg-brand-dark-950/40 p-1 px-1.5 rounded transition duration-150 select-none">
+                <span class="flex items-center gap-1.5 text-brand-text-300">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>Active
+                </span>
+                <span class="font-bold text-brand-text-100 font-mono">{{ filteredDonutData.active }}</span>
+              </div>
+              <div (click)="setDrillDown('status', 'closed')" 
+                   [class.bg-brand-dark-950/60]="drillDownFilter?.key === 'status' && drillDownFilter?.value === 'closed'"
+                   class="flex items-center justify-between cursor-pointer hover:bg-brand-dark-950/40 p-1 px-1.5 rounded transition duration-150 select-none">
+                <span class="flex items-center gap-1.5 text-brand-text-300">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Closed
+                </span>
+                <span class="font-bold text-brand-text-100 font-mono">{{ filteredDonutData.closed }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="relative w-24 h-24 flex items-center justify-center flex-shrink-0">
+            <svg viewBox="0 0 36 36" class="w-full h-full transform -rotate-90">
+              <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" stroke-width="3" class="text-brand-dark-800/60"></circle>
+              <!-- Active Circle Slices -->
+              <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" stroke-linecap="round"
+                      (click)="setDrillDown('status', 'active')"
+                      [attr.stroke-width]="(drillDownFilter?.key === 'status' && drillDownFilter?.value === 'active') ? 5 : 3.5"
+                      [attr.stroke-dasharray]="getActiveDashArray()" class="cursor-pointer hover:opacity-85 transition duration-150"></circle>
+              <!-- Closed Circle Slices -->
+              <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" stroke-linecap="round"
+                      (click)="setDrillDown('status', 'closed')"
+                      [attr.stroke-width]="(drillDownFilter?.key === 'status' && drillDownFilter?.value === 'closed') ? 5 : 3.5"
+                      [attr.stroke-dasharray]="getClosedDashArray()" [attr.stroke-dashoffset]="getClosedDashOffset()"
+                      class="cursor-pointer hover:opacity-85 transition duration-150"></circle>
+            </svg>
+            <div class="absolute flex flex-col items-center justify-center text-center pointer-events-none select-none">
+              <span class="text-[8px] text-brand-text-400 font-semibold font-mono uppercase tracking-widest leading-none">Closed</span>
+              <span class="text-base font-black text-emerald-400 font-mono leading-none mt-0.5">{{ getClosedPercentage() }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trend Area Chart Widget -->
+      <div class="lg:col-span-2 bg-brand-dark-900 border border-brand-dark-800 rounded-xl p-4.5 flex flex-col justify-between hover:border-brand-dark-700 transition duration-150">
+        <div class="flex items-center justify-between border-b border-brand-dark-800/60 pb-2 mb-3">
+          <h4 class="text-[10px] font-bold text-brand-text-100 uppercase tracking-wider flex items-center gap-1.5">
+            📈 Volume Trend Line
+          </h4>
+          <div class="flex items-center gap-1">
+            <select [(ngModel)]="trendConfig.priority" (change)="applyLocalFilters()" 
+                    class="bg-brand-dark-950 border border-brand-dark-800 rounded px-2 py-0.5 text-[9px] font-bold text-brand-text-300 focus:outline-none">
+              <option value="All">All Priority</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+            <select [(ngModel)]="trendConfig.groupBy" (change)="applyLocalFilters()" 
+                    class="bg-brand-dark-950 border border-brand-dark-800 rounded px-2 py-0.5 text-[9px] font-bold text-brand-text-300 focus:outline-none">
+              <option value="day">Daily</option>
+              <option value="week">Weekly</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex-1 flex flex-col justify-end mt-1">
+          <div class="w-full h-24 relative">
+            <svg viewBox="0 0 500 150" class="w-full h-full overflow-visible" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="trendFill-purple" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.25"/>
+                  <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.0"/>
+                </linearGradient>
+              </defs>
+              <!-- Grid lines -->
+              <line x1="0" y1="37" x2="500" y2="37" stroke="currentColor" stroke-width="0.8" class="text-brand-dark-800/30"></line>
+              <line x1="0" y1="75" x2="500" y2="75" stroke="currentColor" stroke-width="0.8" class="text-brand-dark-800/30"></line>
+              <line x1="0" y1="112" x2="500" y2="112" stroke="currentColor" stroke-width="0.8" class="text-brand-dark-800/30"></line>
+              <!-- Area fill -->
+              <path [attr.d]="getTrendAreaPath()" fill="url(#trendFill-purple)"></path>
+              <!-- Sparkline path -->
+              <polyline fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        [attr.points]="getTrendPoints()"></polyline>
+              <!-- Coordinate dots -->
+              <ng-container *ngFor="let pt of getTrendPointCoords(); let i = index">
+                <circle [attr.cx]="pt.x" [attr.cy]="pt.y" 
+                        (click)="setDrillDown('date', filteredTrendData[i].label)"
+                        [attr.r]="(drillDownFilter?.key === 'date' && drillDownFilter?.value === filteredTrendData[i].label) ? 5.5 : 3.5"
+                        [attr.fill]="(drillDownFilter?.key === 'date' && drillDownFilter?.value === filteredTrendData[i].label) ? '#10b981' : '#8b5cf6'" 
+                        stroke="currentColor" stroke-width="1.8" 
+                        class="text-brand-dark-900 cursor-pointer hover:scale-125 transition duration-150"></circle>
+              </ng-container>
+            </svg>
+          </div>
+          <!-- Sparkline Labels -->
+          <div class="flex justify-between px-1 mt-1 text-[8px] text-brand-text-400 font-mono select-none">
+            <span *ngFor="let item of filteredTrendData"
+                  (click)="setDrillDown('date', item.label)"
+                  [class.text-brand-primary]="drillDownFilter?.key === 'date' && drillDownFilter?.value === item.label"
+                  [class.font-bold]="drillDownFilter?.key === 'date' && drillDownFilter?.value === item.label"
+                  class="cursor-pointer hover:text-brand-text-100 transition duration-150">
+              {{ item.label }} ({{ item.count }})
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 2: Categories breakdown & CSAT rating summary -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      
+      <!-- Category breakdown -->
+      <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl p-4.5 hover:border-brand-dark-700 transition duration-150">
+        <div class="flex items-center justify-between border-b border-brand-dark-800/60 pb-2 mb-3">
+          <h4 class="text-[10px] font-bold text-brand-text-100 uppercase tracking-wider flex items-center gap-1.5">
+            🏷️ Categories Breakdown
+          </h4>
+          <div class="flex items-center gap-1.5">
+            <select [(ngModel)]="categoriesConfig.status" (change)="applyLocalFilters()" 
+                    class="bg-brand-dark-950 border border-brand-dark-800 rounded px-2 py-0.5 text-[9px] font-bold text-brand-text-300 focus:outline-none">
+              <option value="All">All Tickets</option>
+              <option value="Active">Active</option>
+              <option value="Closed">Closed</option>
+            </select>
+            <select [(ngModel)]="categoriesConfig.limit" (change)="applyLocalFilters()" 
+                    class="bg-brand-dark-950 border border-brand-dark-800 rounded px-2 py-0.5 text-[9px] font-bold text-brand-text-300 focus:outline-none">
+              <option [ngValue]="5">Top 5</option>
+              <option [ngValue]="10">Top 10</option>
+              <option [ngValue]="0">Show All</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="space-y-3.5 max-h-[160px] overflow-y-auto pr-1">
+          <div *ngFor="let item of filteredCategories" 
+               (click)="setDrillDown('category', item.categoryName)"
+               [class.bg-brand-dark-950/60]="drillDownFilter?.key === 'category' && drillDownFilter?.value === item.categoryName"
+               class="space-y-1 cursor-pointer hover:bg-brand-dark-950/30 p-1 px-1.5 rounded transition duration-150 select-none">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-brand-text-300 truncate max-w-[200px] font-medium">{{ item.categoryName }}</span>
+              <span class="font-bold font-mono text-brand-text-100">{{ item.count }}</span>
+            </div>
+            <div class="w-full bg-brand-dark-950 rounded-full h-1.5 overflow-hidden border border-brand-dark-800/40">
+              <div class="h-full rounded-full bg-gradient-to-r from-blue-600 to-sky-400 transition-all duration-500" 
+                   [style.width.%]="(item.count / (filteredDonutData.total || 1)) * 100"></div>
+            </div>
+          </div>
+          <div *ngIf="!filteredCategories || filteredCategories.length === 0" class="text-center py-8 text-xs text-brand-text-400 font-mono">
+            No category distribution found
+          </div>
+        </div>
+      </div>
+
+      <!-- Satisfaction star summary -->
+      <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl p-4.5 hover:border-brand-dark-700 transition duration-150">
+        <div class="flex items-center justify-between border-b border-brand-dark-800/60 pb-2 mb-3">
+          <h4 class="text-[10px] font-bold text-brand-text-100 uppercase tracking-wider flex items-center gap-1.5">
+            ⭐ Satisfaction Breakdown
+          </h4>
+          <select [(ngModel)]="ratingConfig.customer" (change)="applyLocalFilters()" 
+                  class="bg-brand-dark-950 border border-brand-dark-800 rounded px-2 py-0.5 text-[9px] font-bold text-brand-text-300 focus:outline-none max-w-[150px]">
+            <option value="All">All Customers</option>
+            <option *ngFor="let name of uniqueCustomers" [value]="name">{{ name }}</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-6 py-2">
+          <!-- Left side average -->
+          <div class="text-center min-w-[80px] space-y-0.5 pointer-events-none select-none">
+            <span class="text-2xl text-amber-500">★</span>
+            <div class="text-3xl font-bold text-amber-500 font-mono leading-none">{{ filteredSatisfactionScore }}</div>
+            <div class="text-[9px] text-brand-text-400 font-semibold font-mono uppercase tracking-widest mt-1">Avg CSAT</div>
+          </div>
+
+          <!-- Right side stars breakdown -->
+          <div class="flex-1 space-y-1.5">
+            <div *ngFor="let row of filteredRatingSummary" 
+                 (click)="setDrillDown('rating', row.rating)"
+                 [class.bg-brand-dark-950/60]="drillDownFilter?.key === 'rating' && drillDownFilter?.value === row.rating"
+                 class="flex items-center gap-2 text-xs cursor-pointer hover:bg-brand-dark-950/30 p-1 px-1.5 rounded transition duration-150 select-none">
+              <span class="w-6 font-bold text-amber-500/90 font-mono text-right">{{ row.rating }} ★</span>
+              <div class="flex-1 bg-brand-dark-950 rounded-full h-1.5 overflow-hidden border border-brand-dark-800/40">
+                <div class="bg-gradient-to-r from-amber-500 to-yellow-400 h-full rounded-full transition-all duration-500" 
+                     [style.width.%]="(row.count / (filteredDonutData.total || 1)) * 100"></div>
+              </div>
+              <span class="w-5 text-left font-bold text-brand-text-400 font-mono text-[11px]">{{ row.count }}</span>
+            </div>
+            <div *ngIf="!filteredRatingSummary || filteredRatingSummary.length === 0" class="text-center py-6 text-xs text-brand-text-400 font-mono">
+              No satisfaction ratings available
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer Performance Ledger Table -->
+    <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl overflow-hidden shadow-sm hover:border-brand-dark-700 transition duration-150">
+      <div class="px-4 py-3 border-b border-brand-dark-800 flex items-center justify-between gap-3">
+        <h3 class="text-[11px] font-bold text-brand-text-100 uppercase tracking-wider flex items-center gap-1.5">
+          🏢 Customer Performance Stats
+        </h3>
+        
+        <!-- Search bar -->
+        <div class="relative w-56">
+          <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-brand-text-400 text-xs">🔍</span>
+          <input type="text" [(ngModel)]="customerSearchText" 
+                 placeholder="Search customer..." 
+                 class="w-full bg-brand-dark-950 border border-brand-dark-805 rounded px-2.5 py-1 pl-7 text-xs text-brand-text-100 focus:outline-none focus:border-brand-primary placeholder:text-brand-text-500 transition"/>
+        </div>
+      </div>
+
+      <!-- Customer Stats Grid Header -->
+      <div class="grid grid-cols-12 gap-2 px-4 py-2 border-b border-brand-dark-800 text-[9px] font-bold text-brand-text-400 font-mono uppercase tracking-widest select-none bg-brand-dark-950/10">
+        <div class="col-span-4 cursor-pointer hover:text-brand-text-100 transition flex items-center gap-1" (click)="toggleCustomerSort('customerName')">
+          Customer <span *ngIf="customerSortKey === 'customerName'">{{ customerSortAsc ? '▲' : '▼' }}</span>
+        </div>
+        <div class="col-span-2 text-center cursor-pointer hover:text-brand-text-100 transition flex items-center justify-center gap-1" (click)="toggleCustomerSort('tickets')">
+          Tickets <span *ngIf="customerSortKey === 'tickets'">{{ customerSortAsc ? '▲' : '▼' }}</span>
+        </div>
+        <div class="col-span-2 text-center cursor-pointer hover:text-brand-text-100 transition flex items-center justify-center gap-1" (click)="toggleCustomerSort('sla')">
+          SLA % <span *ngIf="customerSortKey === 'sla'">{{ customerSortAsc ? '▲' : '▼' }}</span>
+        </div>
+        <div class="col-span-2 text-center cursor-pointer hover:text-brand-text-100 transition flex items-center justify-center gap-1" (click)="toggleCustomerSort('csat')">
+          Avg CSAT <span *ngIf="customerSortKey === 'csat'">{{ customerSortAsc ? '▲' : '▼' }}</span>
+        </div>
+        <div class="col-span-2 text-center cursor-pointer hover:text-brand-text-100 transition flex items-center justify-center gap-1" (click)="toggleCustomerSort('resTime')">
+          Avg Res Time <span *ngIf="customerSortKey === 'resTime'">{{ customerSortAsc ? '▲' : '▼' }}</span>
+        </div>
+      </div>
+
+      <!-- Customer Stats Grid Body -->
+      <div class="divide-y divide-brand-dark-800 max-h-[220px] overflow-y-auto">
+        <div *ngFor="let c of getFilteredCustomerStats()" 
+             class="grid grid-cols-12 gap-2 px-4 py-2 hover:bg-brand-dark-950/10 transition items-center text-xs text-brand-text-300">
+          <div class="col-span-4 font-semibold text-brand-text-100 truncate">
+            {{ c.customerName }}
+          </div>
+          <div class="col-span-2 text-center font-mono font-bold text-brand-text-200">
+            {{ c.totalTickets }}
+          </div>
+          <div class="col-span-2 flex justify-center">
+            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded border uppercase tracking-wider"
+                  [ngClass]="{
+                    'bg-emerald-500/10 text-emerald-400 border-emerald-500/20': c.slaCompliancePercent >= 80,
+                    'bg-amber-500/10 text-amber-400 border-amber-500/20': c.slaCompliancePercent >= 50 && c.slaCompliancePercent < 80,
+                    'bg-red-500/10 text-red-400 border-red-500/20': c.slaCompliancePercent < 50
+                  }">
+              {{ c.slaCompliancePercent }}%
+            </span>
+          </div>
+          <div class="col-span-2 text-center font-bold text-yellow-500 font-mono text-xs">
+            ★ {{ c.averageSatisfactionScore }}
+          </div>
+          <div class="col-span-2 text-center text-brand-text-400 font-mono">
+            {{ c.averageResolutionTime }} hrs
+          </div>
+        </div>
+        
+        <!-- Empty State -->
+        <div *ngIf="getFilteredCustomerStats().length === 0" class="flex flex-col items-center justify-center py-6 text-center">
+          <span class="text-2xl opacity-20">🏢</span>
+          <p class="text-xs font-semibold text-brand-text-400 mt-1">No customer records found</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Tickets Table -->
+    <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl overflow-hidden shadow-sm hover:border-brand-dark-700 transition duration-150">
+      <div class="px-4 py-3 border-b border-brand-dark-800 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <h3 class="text-[11px] font-bold text-brand-text-100 uppercase tracking-wider">Recent Tickets</h3>
+          <div *ngIf="drillDownFilter" class="flex items-center gap-1.5 px-2 py-0.5 bg-brand-primary/10 border border-brand-primary/20 rounded text-[9px] text-brand-primary font-bold select-none">
+            <span>Showing: {{ drillDownFilter.key }} = {{ drillDownFilter.value }}</span>
+            <button (click)="drillDownFilter = null" class="material-icons text-[10px] cursor-pointer hover:opacity-80">close</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Table Grid Header -->
+      <div class="grid grid-cols-12 gap-2 px-4 py-2 border-b border-brand-dark-800 text-[9px] font-bold text-brand-text-400 font-mono uppercase tracking-widest select-none bg-brand-dark-950/10">
+        <div class="col-span-1">ID</div>
+        <div class="col-span-2">Customer</div>
+        <div class="col-span-1">Docket #</div>
+        <div class="col-span-2">Subject</div>
+        <div class="col-span-1">Created</div>
+        <div class="col-span-1">Created By</div>
+        <div class="col-span-1">Priority</div>
+        <div class="col-span-1">Status</div>
+        <div class="col-span-1">Assigned</div>
+        <div class="col-span-1 text-center">SLA</div>
+      </div>
+
+      <!-- Table Grid Body -->
+      <div class="divide-y divide-brand-dark-800 max-h-[300px] overflow-y-auto">
+        <div *ngFor="let ticket of getFilteredTickets()" 
+             (click)="openTicket(ticket)"
+             class="grid grid-cols-12 gap-2 px-4 py-2.5 hover:bg-brand-dark-950/30 cursor-pointer transition items-center text-xs text-brand-text-300">
+          
+          <div class="col-span-1 font-mono font-bold text-brand-primary">
+            {{ ticket.ticketId }}
+          </div>
+          <div class="col-span-2 font-semibold text-brand-text-100 truncate" [title]="ticket.customer">
+            {{ ticket.customer }}
+          </div>
+          <div class="col-span-1 text-brand-text-400 font-mono truncate" [title]="ticket.docketNumber">
+            {{ ticket.docketNumber }}
+          </div>
+          <div class="col-span-2 truncate text-brand-text-300 pr-2" [title]="ticket.subject">
+            {{ ticket.subject }}
+          </div>
+          <div class="col-span-1 text-brand-text-400 font-mono text-[10px]">
+            {{ formatDate(ticket.createdOn) }}
+          </div>
+          <div class="col-span-1 text-brand-text-300 truncate text-[10px]" [title]="ticket.createdBy || ticket.customer || 'Customer'">
+            {{ ticket.createdBy || ticket.customer || 'Customer' }}
+          </div>
+          <div class="col-span-1 font-bold uppercase text-[9px]" [ngClass]="getPriorityClass(ticket.priority)">
+            {{ ticket.priority }}
+          </div>
+          <div class="col-span-1 flex">
+            <span class="px-1.5 py-0.5 text-[9px] font-semibold rounded border uppercase tracking-wider" [ngClass]="getStatusBadgeClass(ticket.status)">
+              {{ ticket.status }}
+            </span>
+          </div>
+          <div class="col-span-1 text-brand-text-400 truncate text-[10px]" [title]="ticket.assignedTo">
+            {{ ticket.assignedTo }}
+          </div>
+          <div class="col-span-1 flex justify-center">
+            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded border uppercase tracking-wider" [ngClass]="getSlaBadgeClass(ticket.slaStatus)">
+              {{ ticket.slaStatus }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="getFilteredTickets().length === 0" class="flex flex-col items-center justify-center py-8 text-center">
+          <span class="text-2xl opacity-20">📋</span>
+          <p class="text-sm font-semibold text-brand-text-100 mt-2">No tickets found</p>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+</div>

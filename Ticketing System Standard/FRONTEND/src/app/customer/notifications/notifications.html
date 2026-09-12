@@ -1,0 +1,143 @@
+<div class="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-brand-dark-800">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-brand-text-100">Notification Center</h1>
+      <p class="text-sm text-brand-text-400 mt-1">Manage and view all your real-time activities and updates.</p>
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <button 
+        *ngIf="unreadCount > 0"
+        (click)="markAllAsRead()"
+        class="px-3 py-1.5 bg-brand-dark-800 hover:bg-brand-dark-700 text-brand-text-200 hover:text-brand-text-100 text-xs font-semibold rounded-md flex items-center gap-1.5 transition duration-150 cursor-pointer border border-brand-dark-750">
+        <span class="material-icons text-sm">done_all</span>
+        Mark all read
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters & Tabs -->
+  <div class="flex items-center justify-between bg-brand-dark-900 p-1.5 rounded-lg border border-brand-dark-800 select-none">
+    <div class="flex items-center gap-1">
+      <button 
+        (click)="filterNotifications('all')"
+        [class.bg-brand-dark-800]="currentFilter === 'all'"
+        [class.text-brand-text-100]="currentFilter === 'all'"
+        [class.text-brand-text-400]="currentFilter !== 'all'"
+        class="px-4 py-1.5 text-xs font-medium rounded-md hover:text-brand-text-100 transition duration-150 cursor-pointer">
+        All
+      </button>
+      <button 
+        (click)="filterNotifications('unread')"
+        [class.bg-brand-dark-800]="currentFilter === 'unread'"
+        [class.text-brand-text-100]="currentFilter === 'unread'"
+        [class.text-brand-text-400]="currentFilter !== 'unread'"
+        class="px-4 py-1.5 text-xs font-medium rounded-md hover:text-brand-text-100 flex items-center gap-1.5 transition duration-150 cursor-pointer">
+        Unread
+        <span 
+          *ngIf="unreadCount > 0"
+          class="px-1.5 py-0.5 text-[10px] font-bold bg-brand-primary text-white rounded-full">
+          {{ unreadCount }}
+        </span>
+      </button>
+      <button 
+        (click)="filterNotifications('read')"
+        [class.bg-brand-dark-800]="currentFilter === 'read'"
+        [class.text-brand-text-100]="currentFilter === 'read'"
+        [class.text-brand-text-400]="currentFilter !== 'read'"
+        class="px-4 py-1.5 text-xs font-medium rounded-md hover:text-brand-text-100 transition duration-150 cursor-pointer">
+        Read
+      </button>
+    </div>
+
+    <span class="text-xs text-brand-text-400 px-3 hidden sm:inline-block">
+      Showing {{ notifications.length }} notification{{ notifications.length === 1 ? '' : 's' }}
+    </span>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="flex flex-col items-center justify-center py-20 space-y-4">
+    <div class="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+    <span class="text-xs text-brand-text-400">Loading notifications...</span>
+  </div>
+
+  <!-- Empty State -->
+  <div 
+    *ngIf="!loading && notifications.length === 0" 
+    class="flex flex-col items-center justify-center py-20 text-center bg-brand-dark-900 border border-brand-dark-800 rounded-xl p-6">
+    <div class="w-12 h-12 rounded-full bg-brand-dark-850 flex items-center justify-center mb-4 text-brand-text-400">
+      <span class="material-icons text-2xl">notifications_off</span>
+    </div>
+    <h3 class="text-sm font-semibold text-brand-text-200">No notifications</h3>
+    <p class="text-xs text-brand-text-400 max-w-xs mt-1">
+      You are all caught up! No notifications found in this category.
+    </p>
+  </div>
+
+  <!-- Notifications List -->
+  <div *ngIf="!loading && notifications.length > 0" class="space-y-3">
+    <div 
+      *ngFor="let notification of notifications"
+      (click)="handleNotificationClick(notification)"
+      [class.bg-brand-dark-900]="!notification.isRead"
+      [class.bg-brand-dark-950]="notification.isRead"
+      [class.border-brand-primary\/20]="!notification.isRead"
+      [class.border-brand-dark-800]="notification.isRead"
+      class="flex gap-4 p-4 border rounded-xl hover:bg-brand-dark-850\/60 transition duration-200 cursor-pointer group relative overflow-hidden">
+      
+      <!-- Blue accent bar for unread -->
+      <div 
+        *ngIf="!notification.isRead" 
+        class="absolute left-0 top-0 bottom-0 w-1 bg-brand-primary shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+      </div>
+
+      <!-- Icon Wrapper -->
+      <div 
+        [class.bg-brand-primary\/10]="!notification.isRead"
+        [class.text-brand-primary]="!notification.isRead"
+        [class.bg-brand-dark-800]="notification.isRead"
+        [class.text-brand-text-400]="notification.isRead"
+        class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 shadow-inner">
+        <span class="material-icons text-lg">{{ getIconClass(notification.entityType) }}</span>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 min-w-0">
+        <div class="flex items-start justify-between gap-3">
+          <h3 
+            [class.font-semibold]="!notification.isRead"
+            [class.text-brand-text-100]="!notification.isRead"
+            [class.text-brand-text-300]="notification.isRead"
+            class="text-sm truncate">
+            {{ notification.title }}
+          </h3>
+          <span class="text-[10px] text-brand-text-400 whitespace-nowrap shrink-0 pt-0.5">
+            {{ formatTime(notification.createdAt) }}
+          </span>
+        </div>
+        <p class="text-xs text-brand-text-400 mt-1 line-clamp-2 pr-6 leading-relaxed">
+          {{ notification.message }}
+        </p>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="flex items-center gap-1.5 shrink-0 self-center">
+        <!-- Mark Read Button -->
+        <button 
+          *ngIf="!notification.isRead"
+          (click)="markAsRead(notification, $event)"
+          title="Mark as Read"
+          class="p-1.5 rounded hover:bg-brand-dark-700 text-brand-text-400 hover:text-brand-primary transition duration-150 cursor-pointer">
+          <span class="material-icons text-sm">done</span>
+        </button>
+        <!-- Delete Button -->
+        <button 
+          (click)="deleteNotification(notification.id, $event)"
+          title="Delete Notification"
+          class="p-1.5 rounded hover:bg-red-500/10 text-brand-text-400 hover:text-red-400 transition duration-150 opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer">
+          <span class="material-icons text-sm">delete</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

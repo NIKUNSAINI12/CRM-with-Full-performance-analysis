@@ -1,0 +1,142 @@
+<div class="space-y-6 pb-12 animate-in fade-in slide-in-from-top-4 duration-300">
+  <!-- TOP STATS BAR -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-surface rounded-xl p-6 shadow-xl">
+    <div>
+      <h1 class="text-xl font-bold text-high flex items-center gap-2.5">
+        <span class="material-icons text-brand-primary text-2xl">account_tree</span>
+        Organization Hierarchy Chart
+      </h1>
+      <p class="text-xs text-muted mt-1">
+        Visualize reporting structures, managers, and assigned executives across your workspace.
+      </p>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="flex items-center gap-6 shrink-0">
+      <div class="flex items-center gap-3 bg-workspace-card border px-4 py-2.5 rounded-lg">
+        <div class="w-9 h-9 rounded-lg bg-brand-primary/10 text-brand-primary flex items-center justify-center">
+          <span class="material-icons text-lg">supervisor_account</span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] text-muted uppercase tracking-widest font-mono font-semibold">Total PMs</span>
+          <span class="text-base font-bold text-high mt-0.5">{{ totalPMs }}</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 bg-workspace-card border px-4 py-2.5 rounded-lg">
+        <div class="w-9 h-9 rounded-lg bg-brand-secondary/10 text-brand-secondary flex items-center justify-center">
+          <span class="material-icons text-lg">engineering</span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] text-muted uppercase tracking-widest font-mono font-semibold">Executives</span>
+          <span class="text-base font-bold text-high mt-0.5">{{ totalDevelopers }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH BAR -->
+  <div class="relative w-full max-w-md">
+    <span class="material-icons text-muted text-lg absolute left-3 top-1/2 -translate-y-1/2 select-none">search</span>
+    <input type="text" 
+           [(ngModel)]="searchTerm" 
+           (input)="filterHierarchy()" 
+           placeholder="Search by name, role, or user ID..." 
+           class="w-full pl-10 pr-4 py-2.5 bg-surface rounded-lg text-sm text-high placeholder-muted focus:outline-none focus:border-brand-primary shadow-lg transition duration-200">
+  </div>
+
+  <!-- TREE CONTAINER -->
+  <div class="bg-surface rounded-xl p-8 shadow-2xl relative overflow-hidden min-h-[400px]">
+    
+    <!-- Loading overlay -->
+    <div *ngIf="isLoading" class="absolute inset-0 bg-brand-dark-900/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+      <div class="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+      <span class="text-xs text-regular mt-3 font-semibold">Building organization chart...</span>
+    </div>
+
+    <!-- Error message -->
+    <div *ngIf="errorMessage" class="flex items-center gap-3 bg-red-500/10 border border-red-500/20 text-red-200 p-4 rounded-lg">
+      <span class="material-icons text-xl">error_outline</span>
+      <span class="text-xs font-semibold">{{ errorMessage }}</span>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!isLoading && filteredRootNodes.length === 0" class="flex flex-col items-center justify-center py-20 text-center">
+      <span class="material-icons text-brand-text-500 text-4xl mb-3">account_tree</span>
+      <span class="text-sm font-semibold text-regular">No matching reporting structures</span>
+      <span class="text-xs text-muted mt-1">Try adjusting your search criteria</span>
+    </div>
+
+    <!-- Hierarchy Tree rendering -->
+    <div *ngIf="!isLoading && filteredRootNodes.length > 0" class="tree-root-container">
+      <div *ngFor="let root of filteredRootNodes" class="org-root-node">
+        <ng-container *ngTemplateOutlet="nodeTemplate; context: { $implicit: root }"></ng-container>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RECURSIVE TREE TEMPLATE -->
+<ng-template #nodeTemplate let-node>
+  <div class="org-node-container">
+    <!-- Node User Card -->
+    <div class="user-card flex items-center gap-3.5 rounded-xl p-4 w-72 shadow-lg transition duration-200 cursor-default relative overflow-hidden group"
+         [class.card-super]="node.role.includes('Super') || node.role.includes('Admin')"
+         [class.card-pm]="node.role === 'Project Manager' || node.role === 'PM'"
+         [class.card-developer]="node.role === 'Developer' || node.role === 'Assignee'"
+         [class.card-unassigned]="node.id === -999">
+      
+      <!-- Role Gradient Accents -->
+      <span class="absolute top-0 left-0 w-1.5 h-full"
+            [class.bg-brand-primary]="node.role.includes('Super') || node.role.includes('Admin')"
+            [class.bg-brand-secondary]="node.role === 'Project Manager' || node.role === 'PM'"
+            [class.bg-emerald-500]="node.role === 'Developer' || node.role === 'Assignee'"
+            [class.bg-brand-text-500]="node.id === -999"
+            [class.bg-slate-400]="node.id === -999">
+      </span>
+
+      <!-- Initials Badge -->
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white text-xs shrink-0 select-none shadow-md"
+           [class.bg-brand-primary]="node.role.includes('Super') || node.role.includes('Admin')"
+           [class.bg-brand-secondary]="node.role === 'Project Manager' || node.role === 'PM'"
+           [class.bg-emerald-500/10]="node.role === 'Developer' || node.role === 'Assignee'"
+           [class.text-emerald-400]="node.role === 'Developer' || node.role === 'Assignee'"
+           [class.bg-workspace-card]="node.id === -999"
+           [class.text-muted]="node.id === -999">
+        <span class="material-icons text-lg" *ngIf="node.id === -999">groups</span>
+        <span *ngIf="node.id !== -999">{{ getInitials(node.name) }}</span>
+      </div>
+
+      <!-- Node text details -->
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-semibold text-high truncate group-hover:text-brand-text-50">{{ node.name }}</div>
+        <div class="flex items-center gap-1.5 text-[9px] font-mono text-muted mt-1 truncate">
+          <span>{{ node.userNumber }}</span>
+          <span class="w-1 h-1 rounded-full bg-brand-text-400/30"></span>
+          <span class="font-sans font-medium uppercase px-1 py-0.5 bg-workspace-card rounded text-regular text-[8px]">
+            {{ (node.role === 'Assignee' || node.role === 'Developer') ? 'Executive' : node.role }}
+          </span>
+        </div>
+        <div *ngIf="node.email && node.email !== 'N/A'" class="text-[9.5px] text-muted mt-1 truncate select-text">{{ node.email }}</div>
+      </div>
+
+      <!-- Collapse Toggle Icon -->
+      <button *ngIf="node.children && node.children.length > 0"
+              (click)="toggleExpand(node, $event)"
+              class="p-1 rounded-md text-muted hover:text-high hover:bg-workspace-card transition shrink-0 cursor-pointer">
+        <span class="material-icons text-sm flex items-center justify-center transition-transform duration-200"
+              [class.rotate-90]="node.isExpanded" [class.rotate-0]="!node.isExpanded">chevron_right</span>
+      </button>
+    </div>
+
+    <!-- Connector down to children -->
+    <div *ngIf="node.children && node.children.length > 0 && node.isExpanded" class="connector-down"></div>
+
+    <!-- Children Row container -->
+    <div *ngIf="node.children && node.children.length > 0 && node.isExpanded" class="org-children-wrapper">
+      <div *ngFor="let child of node.children" class="org-child">
+        <ng-container *ngTemplateOutlet="nodeTemplate; context: { $implicit: child }"></ng-container>
+      </div>
+    </div>
+  </div>
+</ng-template>

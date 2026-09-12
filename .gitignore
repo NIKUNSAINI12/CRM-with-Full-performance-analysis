@@ -1,0 +1,30 @@
+# Ignore large archives
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+
+# Ignore Build Outputs
+**/bin/
+**/obj/
+**/Release/
+**/Debug/
+*.dll
+*.exe
+*.pdb
+*.cache
+
+# Node & Frontend Build Outputs
+**/node_modules/
+**/dist/
+**/.angular/
+**/.output/
+
+# IDE and OS files
+.vs/
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store

@@ -1,0 +1,327 @@
+<div class="flex h-screen w-screen overflow-hidden bg-brand-dark-950 text-brand-text-100 font-sans" *ngIf="isLoggedIn && showHeader; else fullScreen">
+  <!-- SLEEK COLLAPSIBLE SIDEBAR -->
+  <aside *ngIf="userRole !== 'Customer'" class="flex flex-col h-full bg-brand-dark-900 border-r border-brand-dark-800 transition-all duration-300 select-none z-20 shrink-0" 
+         [class.w-64]="!sidebarCollapsed" [class.w-16]="sidebarCollapsed">
+    
+    <!-- Workspace Header -->
+    <div class="flex items-center justify-between h-14 px-4 border-b border-brand-dark-800 shrink-0">
+      <div class="flex items-center gap-3 overflow-hidden" *ngIf="!sidebarCollapsed">
+        <div class="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center font-bold text-white shadow-md shadow-brand-primary/20 shrink-0">
+          E
+        </div>
+        <div class="flex flex-col min-w-0">
+          <span class="text-sm font-semibold truncate text-brand-text-100">Empower Logics</span>
+          <span class="text-[10px] text-brand-text-400 font-mono tracking-wider">Workspace</span>
+        </div>
+      </div>
+      <div class="flex items-center justify-center" [class.w-full]="sidebarCollapsed">
+        <button (click)="toggleSidebar()" class="p-1.5 rounded-md text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-700 transition duration-150 cursor-pointer">
+          <span class="material-icons text-lg flex items-center justify-center">{{ sidebarCollapsed ? 'menu_open' : 'menu' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Items -->
+    <nav class="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+      
+      <!-- PM / MANAGER WORKSPACE OPTIONS -->
+      <ng-container *ngIf="rbacService.hasPermission('view_pm_workspace')">
+        <a routerLink="/pm/dashboard" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-150 group cursor-pointer no-underline">
+          <span class="material-icons text-xl group-hover:text-brand-primary transition duration-150">dashboard</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">Dashboard</span>
+        </a>
+        <a routerLink="/pm/performance" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-text-300 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-200 group">
+          <span class="material-icons text-[20px] text-brand-text-400 group-hover:text-brand-primary transition-colors">insights</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">Performance</span>
+        </a>
+        <a routerLink="/pm/tat" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-text-300 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-200 group">
+          <span class="material-icons text-[20px] text-brand-text-400 group-hover:text-brand-primary transition-colors">av_timer</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">TAT Dashboard</span>
+        </a>
+        <a routerLink="/pm/hierarchy" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-text-300 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-200 group">
+          <span class="material-icons text-[20px] text-brand-text-400 group-hover:text-brand-primary transition-colors">account_tree</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">Hierarchy Chart</span>
+        </a>
+        <a routerLink="/pm/sprints" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-text-300 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-200 group">
+          <span class="material-icons text-[20px] text-brand-text-400 group-hover:text-brand-primary transition-colors">running_with_errors</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">Sprint Planning</span>
+        </a>
+      </ng-container>
+
+      <!-- DEVELOPER / ASSIGNEE WORKSPACE OPTIONS -->
+      <ng-container *ngIf="rbacService.hasPermission('view_developer_workspace') && (userRole === 'Assignee' || userRole === 'Developer')">
+        <a routerLink="/developer/dashboard" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-150 group cursor-pointer no-underline">
+          <span class="material-icons text-xl group-hover:text-brand-primary transition duration-150">dashboard</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">Dashboard</span>
+        </a>
+        <a routerLink="/pm/tat" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-text-300 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-200 group">
+          <span class="material-icons text-[20px] text-brand-text-400 group-hover:text-brand-primary transition-colors">av_timer</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">TAT Dashboard</span>
+        </a>
+      </ng-container>
+
+      <!-- MASTER FORMS SECTION -->
+      <ng-container *ngIf="rbacService.hasAnyPermission(['view_master_products', 'view_master_customers', 'view_master_assignees', 'view_master_managers', 'manage_roles'])">
+        <div class="h-px bg-brand-dark-800 my-4" *ngIf="!sidebarCollapsed"></div>
+        <div class="px-3 mb-2 text-[10px] font-semibold text-brand-text-400 uppercase tracking-widest font-mono" *ngIf="!sidebarCollapsed">Master Forms</div>
+
+        <a *ngIf="rbacService.hasPermission('view_master_products')" routerLink="/masterform/products" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-150 group cursor-pointer no-underline">
+          <span class="material-icons text-xl group-hover:text-brand-primary transition duration-150">layers</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">Products</span>
+        </a>
+        
+        <div class="h-px bg-brand-dark-800 my-4" *ngIf="!sidebarCollapsed"></div>
+        <div class="px-3 mb-2 text-[10px] font-semibold text-brand-text-400 uppercase tracking-widest font-mono" *ngIf="!sidebarCollapsed">Workspace Settings</div>
+        
+        <!-- USER HUB LINK -->
+        <a *ngIf="rbacService.hasAnyPermission(['view_master_customers', 'view_master_assignees', 'view_master_managers'])" 
+           routerLink="/masterform/users" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-150 group cursor-pointer no-underline">
+          <span class="material-icons text-xl group-hover:text-brand-primary transition duration-150">groups</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">User Hub</span>
+        </a>
+
+        <!-- ROLES & WORKFLOWS LINK -->
+        <a *ngIf="rbacService.hasPermission('manage_roles')" 
+           routerLink="/masterform/roles" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-150 group cursor-pointer no-underline">
+          <span class="material-icons text-xl group-hover:text-brand-primary transition duration-150">security</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">Role & Workflows</span>
+        </a>
+
+      </ng-container>
+        
+      <ng-container *ngIf="rbacService.hasAnyPermission(['view_master_statuses', 'view_master_priorities', 'view_master_categories'])">
+        <div class="h-px bg-brand-dark-800 my-4" *ngIf="!sidebarCollapsed"></div>
+        <div class="px-3 mb-2 text-[10px] font-semibold text-brand-text-400 uppercase tracking-widest font-mono" *ngIf="!sidebarCollapsed">Custom Attributes</div>
+
+        <a *ngIf="rbacService.hasPermission('view_master_statuses')" routerLink="/masterform/statuses" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-150 group cursor-pointer no-underline">
+          <span class="material-icons text-xl group-hover:text-brand-primary transition duration-150">task_alt</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">Statuses</span>
+        </a>
+        <a *ngIf="rbacService.hasPermission('view_master_priorities')" routerLink="/masterform/priorities" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-150 group cursor-pointer no-underline">
+          <span class="material-icons text-xl group-hover:text-brand-primary transition duration-150">priority_high</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">Priorities</span>
+        </a>
+        <a *ngIf="rbacService.hasPermission('view_master_categories')" routerLink="/masterform/categories" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-150 group cursor-pointer no-underline">
+          <span class="material-icons text-xl group-hover:text-brand-primary transition duration-150">category</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">Issue Categories</span>
+        </a>
+        <a *ngIf="rbacService.hasPermission('view_master_categories')" routerLink="/masterform/sources" routerLinkActive="bg-brand-dark-700! text-brand-text-100!" 
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-150 group cursor-pointer no-underline">
+          <span class="material-icons text-xl group-hover:text-brand-primary transition duration-150">source</span>
+          <span class="text-sm font-medium transition-opacity duration-200 truncate" [class.opacity-0]="sidebarCollapsed" [class.pointer-events-none]="sidebarCollapsed">Ticket Sources</span>
+        </a>
+      </ng-container>
+
+
+
+
+
+    </nav>
+
+    <!-- Sidebar Bottom User Info -->
+    <div class="p-3 border-t border-brand-dark-800 shrink-0">
+      <div class="flex items-center justify-between" *ngIf="!sidebarCollapsed">
+        <div class="flex items-center gap-2.5 overflow-hidden">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center font-bold text-white text-xs shrink-0 select-none shadow-md shadow-brand-primary/10">
+            {{ userInitials }}
+          </div>
+          <div class="flex flex-col overflow-hidden min-w-0">
+            <span class="text-xs font-semibold truncate text-brand-text-100" [title]="userName || userRole">{{ userName || userRole }}</span>
+            <div class="flex items-center gap-1.5 text-[9px] text-brand-text-400 font-mono truncate mt-0.5">
+              <span>{{ loginId || ('ID: ' + userId) }}</span>
+              <span class="w-1 h-1 rounded-full bg-brand-text-400/30"></span>
+              <span class="text-brand-text-300 font-sans font-medium uppercase text-[8px] px-1 py-0.5 bg-brand-dark-700 rounded">{{ userRole }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-1">
+          <!-- THEME TOGGLE BUTTON -->
+          <button (click)="toggleTheme()" title="Toggle Theme" class="p-1.5 rounded-md text-brand-text-400 hover:text-brand-primary hover:bg-brand-dark-700 transition duration-150 cursor-pointer">
+            <span class="material-icons text-sm flex items-center justify-center">{{ isLightTheme ? 'light_mode' : 'dark_mode' }}</span>
+          </button>
+          
+          <button (click)="logout()" class="p-1.5 rounded-md text-brand-text-400 hover:text-red-400 hover:bg-red-500/10 transition duration-150 cursor-pointer">
+            <span class="material-icons text-lg flex items-center justify-center">logout</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="flex flex-col gap-2 items-center" *ngIf="sidebarCollapsed">
+        <!-- Collapsed Theme Toggler -->
+        <button (click)="toggleTheme()" title="Toggle Theme" class="p-1.5 rounded-md text-brand-text-400 hover:text-brand-primary hover:bg-brand-dark-700 transition duration-150 cursor-pointer">
+          <span class="material-icons text-sm flex items-center justify-center">{{ isLightTheme ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
+
+        <button (click)="logout()" class="p-1.5 rounded-md text-brand-text-400 hover:text-red-400 hover:bg-red-500/10 transition duration-150 cursor-pointer">
+          <span class="material-icons text-lg flex items-center justify-center">logout</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <div class="flex-1 flex flex-col h-full overflow-hidden bg-brand-dark-950">
+    
+    <!-- Unified Workspace Topbar -->
+    <header class="h-14 bg-brand-dark-900 border-b border-brand-dark-800 flex items-center justify-between px-6 z-10 shrink-0 select-none">
+      <div class="flex items-center gap-2">
+        <span class="text-[10px] text-brand-text-400 font-mono tracking-widest">WORKSPACE</span>
+        <span class="text-[10px] text-brand-text-400 font-mono">/</span>
+        <span class="text-[10px] font-semibold text-brand-primary uppercase font-mono tracking-widest">{{ (userRole === 'Assignee' || userRole === 'Developer') ? 'Executive' : userRole }} Portal</span>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <!-- Quick Search -->
+        <div class="relative w-48 hidden sm:block">
+          <span class="material-icons text-brand-text-400 text-sm absolute left-2.5 top-1/2 -translate-y-1/2">search</span>
+          <input type="text" placeholder="Search tickets..." 
+                 class="w-full pl-8 pr-3 py-1 bg-brand-dark-950 border border-brand-dark-800 rounded-md text-xs text-brand-text-100 placeholder-brand-text-400 focus:outline-none focus:border-brand-primary transition duration-150">
+        </div>
+        
+        <!-- Real-Time Notification Bell & Dropdown -->
+        <div class="relative flex items-center">
+          <button (click)="toggleNotificationsDropdown($event)"
+                  class="p-2 rounded-lg text-brand-text-400 hover:text-brand-text-100 hover:bg-brand-dark-800 transition duration-150 cursor-pointer relative">
+            <span class="material-icons text-xl flex items-center justify-center">notifications</span>
+            <span *ngIf="dropdownUnreadCount > 0" 
+                  class="absolute top-1.5 right-1.5 w-4 h-4 bg-brand-primary text-[9px] font-bold text-white rounded-full flex items-center justify-center border border-brand-dark-900 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-pulse">
+              {{ dropdownUnreadCount }}
+            </span>
+          </button>
+
+          <!-- Invisible Backdrop to Close Dropdown -->
+          <div *ngIf="showNotificationsDropdown" 
+               (click)="showNotificationsDropdown = false" 
+               class="fixed inset-0 z-40 bg-transparent">
+          </div>
+
+          <!-- Notifications Dropdown Overlay -->
+          <div *ngIf="showNotificationsDropdown" 
+               class="absolute right-0 top-11 w-80 bg-brand-dark-900 border border-brand-dark-800 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-4 py-3 border-b border-brand-dark-800 bg-brand-dark-850/50">
+              <span class="text-xs font-semibold text-brand-text-100 flex items-center gap-1.5">
+                Notifications
+                <span *ngIf="dropdownUnreadCount > 0" class="px-1.5 py-0.5 bg-brand-primary/10 text-brand-primary rounded text-[9px] font-bold">
+                  {{ dropdownUnreadCount }} new
+                </span>
+              </span>
+              <button *ngIf="dropdownUnreadCount > 0" 
+                      (click)="markAllNotificationsAsRead($event)"
+                      class="text-[10px] text-brand-primary hover:text-brand-primary/80 hover:underline font-medium transition cursor-pointer">
+                Mark all read
+              </button>
+            </div>
+
+            <!-- List -->
+            <div class="max-h-80 overflow-y-auto divide-y divide-brand-dark-800/60">
+              <div *ngIf="dropdownNotifications.length === 0" 
+                   class="flex flex-col items-center justify-center py-8 text-center px-4">
+                <span class="material-icons text-brand-text-500 text-2xl mb-2">notifications_none</span>
+                <span class="text-xs text-brand-text-300 font-medium">All caught up!</span>
+                <span class="text-[10px] text-brand-text-500 mt-0.5">No new notifications.</span>
+              </div>
+
+              <div *ngFor="let note of dropdownNotifications"
+                   (click)="handleNotificationClick(note)"
+                   [class.bg-brand-dark-850/20]="!note.isRead"
+                   class="flex gap-3 p-3.5 hover:bg-brand-dark-800/60 transition duration-150 cursor-pointer relative pr-8">
+                
+                <!-- Unread Indicator Dot -->
+                <span *ngIf="!note.isRead" 
+                      class="absolute right-3.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-brand-primary shadow-[0_0_8px_rgba(59,130,246,0.6)]">
+                </span>
+
+                <!-- Icon -->
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                     [class.bg-brand-primary/10]="!note.isRead"
+                     [class.text-brand-primary]="!note.isRead"
+                     [class.bg-brand-dark-800]="note.isRead"
+                     [class.text-brand-text-400]="note.isRead">
+                  <span class="material-icons text-base">
+                    {{ note.entityType?.toLowerCase() === 'ticket' ? 'confirmation_number' : (note.entityType?.toLowerCase() === 'customer' ? 'business' : 'notifications') }}
+                  </span>
+                </div>
+
+                <!-- Text -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="text-[11px] font-semibold truncate text-brand-text-200" [class.text-brand-text-100]="!note.isRead">
+                      {{ note.title }}
+                    </span>
+                  </div>
+                  <p class="text-[10px] text-brand-text-400 truncate mt-0.5" [class.text-brand-text-300]="!note.isRead">
+                    {{ note.message }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="border-t border-brand-dark-800 bg-brand-dark-850/50">
+              <a routerLink="/notifications" 
+                 class="block w-full py-2.5 text-center text-xs font-semibold text-brand-primary hover:text-brand-primary/80 hover:bg-brand-dark-800/20 transition cursor-pointer no-underline">
+                View All Notifications
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Role Specific Quick Button -->
+        <button *ngIf="rbacService.hasPermission('create_ticket')" (click)="openQuickTicket()" 
+                class="px-2.5 py-1.5 bg-brand-primary hover:bg-brand-primary/95 text-white text-xs font-semibold rounded-md flex items-center gap-1.5 shadow-md shadow-brand-primary/10 transition duration-150 cursor-pointer">
+          <span class="material-icons text-sm">add</span>
+          New Issue
+        </button>
+
+        <!-- Customer Actions in Topbar (since Sidebar is hidden) -->
+        <ng-container *ngIf="userRole === 'Customer'">
+          <div class="h-6 w-px bg-brand-dark-800 mx-1"></div>
+          
+          <!-- Theme Toggle -->
+          <button (click)="toggleTheme()" title="Toggle Theme" class="p-2 rounded-lg text-brand-text-400 hover:text-brand-primary hover:bg-brand-dark-800 transition duration-150 cursor-pointer">
+            <span class="material-icons text-lg flex items-center justify-center">{{ isLightTheme ? 'light_mode' : 'dark_mode' }}</span>
+          </button>
+
+          <!-- User Info and Initials -->
+          <div class="flex items-center gap-2 px-1">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center font-bold text-white text-xs select-none shadow-md shadow-brand-primary/10">
+              {{ userInitials }}
+            </div>
+            <span class="text-xs font-semibold text-brand-text-100 hidden md:block max-w-[120px] truncate" [title]="userName">{{ userName }}</span>
+          </div>
+
+          <!-- Logout Button -->
+          <button (click)="logout()" title="Logout" class="p-2 rounded-lg text-brand-text-400 hover:text-red-400 hover:bg-red-500/10 transition duration-150 cursor-pointer">
+            <span class="material-icons text-lg flex items-center justify-center">logout</span>
+          </button>
+        </ng-container>
+      </div>
+    </header>
+
+    <!-- Scrollable Router Body -->
+    <main class="flex-1 overflow-y-auto bg-brand-dark-950 relative p-6">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
+
+<ng-template #fullScreen>
+  <main class="w-screen h-screen bg-brand-dark-950 overflow-auto">
+    <router-outlet></router-outlet>
+  </main>
+</ng-template>

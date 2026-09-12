@@ -1,0 +1,1057 @@
+import { Component, OnInit, OnDestroy, Inject, HostListener } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Observable, Subscription, from, BehaviorSubject } from 'rxjs';
+import { switchMap, map, catchError, finalize, tap } from 'rxjs/operators';
+import { TICKET_SERVICE_TOKEN } from '../../Core/injection-tokens';
+
+import { Ticket, User } from '../../Core/models/ticket.model'; 
+import { DashboardStats, TicketService, TicketResponse } from '../../Core/services/ticket.service';
+import { AuthService } from '../../Core/services/auth';
+
+@Component({
+  selector: 'app-pm-dashboard',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './pm-dashboard.html',
+  styleUrls: ['./pm-dashboard.scss']
+})
+export class PmDashboardComponent implements OnInit, OnDestroy {
+
+  // Sidebar state
+  public sidebarCollapsed = false;
+  public sidebarOpen = false;
+  public currentUser: User | null = null;
+
+  // Tickets
+  private ticketsSubject = new BehaviorSubject<Ticket[]>([]);
+  public tickets$: Observable<Ticket[]> = this.ticketsSubject.asObservable();
+  public allTickets: Ticket[] = [];
+  public filteredTickets: Ticket[] = [];
+  public paginatedTickets: Ticket[] = [];
+  
+  // Pagination
+  public currentPage: number = 1;
+  public pageSize: number = 15;
+  public totalPages: number = 0;
+  public totalRecords: number = 0;
+  public pageSizeOptions: number[] = [10, 15, 25, 50];
+  
+  // Loading and stats
+  public stats: DashboardStats | null = null;
+  public displayStats = {
+    totalPending: 0,
+    forReview: 0,
+    urgentTickets: 0,
+    delayedTickets: 0,
+    newToday: 0
+  };
+  public activeStatFilter: string | null = null;
+  public isLoading = false;
+  public pmTicketFilter: 'all' | 'mine' | 'juniors' = 'all';
+
+  // Filters
+  public statusOptions: string[] = ['Open', 'Assigned', 'On Hold', 'Rework', 'Work Done', 'Closed'];
+  public priorityOptions: string[] = ['Low', 'Medium', 'High', 'Urgent'];
+  public selectedStatus: string | null = null;
+  public selectedPriority: string | null = null;
+  public searchTicketNumber = '';
+  
+  public assigneeOptions: { id: number; name: string; assigneeNumber: string }[] = [];
+  public selectedAssignee: string | null = null;
+
+  public allCustomers: User[] = [];
+  public selectedCustomer: number | null = null;
+
+  // Sorting
+  public sortField: string = '';
+  public sortDirection: 'asc' | 'desc' = 'asc';
+
+  private subscription = new Subscription();
+  private pmId: number = 0;
+
+  // Detect screen size
+  public isMobile = false;
+  
+  // Customer list modal properties
+  public showCustomerSelect = false;
+  public filteredCustomers: User[] = [];
+  public customerSearchTerm: string = '';
+  public customerListIsLoading = false;
+  public showFilterSection = false;
+  public sprintTickets: Ticket[] = [];
+  public developerSearchInput = 'All Developers';
+  public customerSearchInput = 'All Customers';
+  public showDeveloperDropdown = false;
+  public showCustomerDropdown = false;
+
+  // Prevent duplicate API calls
+  private customersLoaded = false;
+
+  constructor(
+    @Inject(TICKET_SERVICE_TOKEN) private ticketService: TicketService,
+    private router: Router,
+    private route: ActivatedRoute,
+    private authService: AuthService
+  ) {
+    this.checkScreenSize();
+  }
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event?: Event) {
+    this.checkScreenSize();
+  }
+
+  private checkScreenSize() {
+    this.isMobile = window.innerWidth <= 768;
+    if (this.isMobile) {
+      this.sidebarOpen = false;
+    }
+  }
+
+  ngOnInit(): void {
+    const savedState = localStorage.getItem('sidebarCollapsed');
+    if (savedState !== null && !this.isMobile) {
+      this.sidebarCollapsed = JSON.parse(savedState);
+    }
+    
+    const user = this.authService.getCurrentUser();
+    if (user?.userId) {
+      this.pmId = Number(user.userId);
+      this.loadCurrentUser(this.pmId);
+      this.loadStats(this.pmId);
+      this.loadStatuses().then(() => {
+        this.loadTickets();
+      });
+      this.loadAssignees();
+      this.loadAllCustomers();
+    }
+
+    this.subscription.add(
+      this.route.queryParamMap.subscribe(queryParams => {
+        const openDrawer = queryParams.get('openCreateDrawer');
+        if (openDrawer === 'true') {
+          this.navigateToSelectCustomer();
+        }
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+
+  private loadCurrentUser(id: number): void {
+    try {
+      const user = this.authService.getCurrentUser();
+      if (user && (Number(user.userId) === id || (user as any).id === id)) {
+        this.currentUser = {
+          id: Number(user.userId) || id,
+          fullName: user.name || 'Staff Member',
+          userNumber: user.userNumber || 'STAFF',
+          role: user.role,
+          email: ''
+        } as User;
+      } else {
+        throw new Error('User ID mismatch or not logged in');
+      }
+    } catch (error) {
+      console.error('Failed to load current user', error);
+      this.currentUser = { id: id, fullName: 'Staff Member', userNumber: 'STAFF', role: 'Staff' } as User;
+    }
+  }
+
+  // Unified customer loading method
+  private async loadAllCustomers(): Promise<void> {
+    if (this.customersLoaded) {
+      this.filteredCustomers = [...this.allCustomers];
+      return;
+    }
+
+    try {
+      const role = this.currentUser?.role || '';
+      const useMyCustomersList = ['Assignee', 'PM', 'Project Manager', 'SuperManager', 'Manager'].includes(role);
+      const customers = useMyCustomersList
+        ? await this.ticketService.getMyCustomers()
+        : await this.ticketService.getUsersByRole('Customer');
+      this.allCustomers = customers;
+      this.filteredCustomers = [...customers];
+      this.customersLoaded = true;
+      this.updateSearchInputs();
+    } catch (error) {
+      console.error('Failed to load customers:', error);
+      this.allCustomers = [];
+      this.filteredCustomers = [];
+    }
+  }
+
+  public toggleSidebar(): void {
+    if (this.isMobile) {
+      this.sidebarOpen = !this.sidebarOpen;
+    } else {
+      this.sidebarCollapsed = !this.sidebarCollapsed;
+      localStorage.setItem('sidebarCollapsed', JSON.stringify(this.sidebarCollapsed));
+    }
+  }
+
+  async loadStats(pmId: number): Promise<void> {
+    if (!pmId) return;
+    try {
+      this.stats = await this.ticketService.getDashboardStats(pmId);
+    } catch (error) {
+      console.error('Failed to load PM dashboard stats:', error);
+    }
+  }
+
+  private async loadStatuses(): Promise<void> {
+    try {
+      const statuses = await this.ticketService.getCustomStatuses();
+      if (statuses && statuses.length > 0) {
+        this.statusOptions = statuses.map(s => s.statusName || s.StatusName || s);
+      }
+    } catch (error) {
+      console.error('Failed to load dynamic statuses:', error);
+      // Keep hardcoded fallback if API fails
+      this.statusOptions = ['Open', 'Assigned', 'In Progress', 'Pending PM Review', 'Pending for PM Review', 'Work Done', 'Rework', 'On Hold', 'Closed', 'Resolved'];
+    }
+  }
+
+  private async loadAssignees(): Promise<void> {
+    try {
+      const assignees = await this.ticketService.getAssignees();
+      this.assigneeOptions = assignees.map(a => ({
+        id: a.id,
+        name: `${a.assigneeNumber} - ${a.fullName}`,
+        assigneeNumber: a.assigneeNumber
+      }));
+      this.updateSearchInputs();
+    } catch (error) {
+      console.error('Failed to load assignees:', error);
+    }
+  }
+
+  private loadTickets(): void {
+    this.isLoading = true;
+
+    const params = { 
+        pmId: this.pmId, 
+        pageNumber: 1,
+        pageSize: 1000,
+        status: this.selectedStatus, 
+        priority: this.selectedPriority,
+        assignedToId: this.selectedAssignee,
+        customerId: this.selectedCustomer
+    };
+
+    from(this.ticketService.getTicketsForPM(params)).pipe(
+        finalize(() => { this.isLoading = false; })
+    ).subscribe({
+        next: async (response) => {
+            this.allTickets = response.tickets || [];
+            this.updateStatusOptionsWithTicketStatuses();
+            await this.loadTicketDeadlines();
+            this.applyFiltersAndPagination();
+        },
+        error: (error) => {
+            console.error('Failed to load tickets:', error);
+            this.allTickets = [];
+            this.totalRecords = 0;
+            this.applyFiltersAndPagination();
+        }
+    });
+  }
+
+  private async loadTicketDeadlines(): Promise<void> {
+    if (this.allTickets.length === 0) return;
+
+    try {
+      // Single batch API call instead of N individual calls
+      const ticketIds = this.allTickets.map(t => t.id);
+      const deadlines = await this.ticketService.getTicketDeadlinesBatch(ticketIds);
+
+      // Map results back onto tickets
+      const deadlineMap = new Map<number, string | null>();
+      deadlines.forEach(d => deadlineMap.set(d.ticketId, d.deadlineDate || null));
+
+      this.allTickets.forEach(ticket => {
+        (ticket as any).deadline = deadlineMap.get(ticket.id) || null;
+      });
+    } catch (error) {
+      console.error('Error loading ticket deadlines:', error);
+    }
+  }
+
+
+  public openCreateCustomerForm(): void {
+    this.closeMobileSidebar();
+    this.router.navigate(['/masterform/customer/new'], { queryParams: { pmId: this.pmId } });
+  }
+
+  public openCreateAssigneeForm(): void {
+    this.closeMobileSidebar();
+    this.router.navigate(['/masterform/assignee/new'], { queryParams: { pmId: this.pmId } });
+  }
+
+  public openCustomerList(): void {
+    this.closeMobileSidebar();
+    this.router.navigate(['/masterform/customers'], { queryParams: { pmId: this.pmId } });
+  }
+
+  public openAssigneeList(): void {
+    this.closeMobileSidebar();
+    this.router.navigate(['/masterform/assignees'], { queryParams: { pmId: this.pmId } });
+  }
+
+  public openproductlist(): void {
+    this.closeMobileSidebar();
+    this.router.navigate(['/masterform/products'], { queryParams: { pmId: this.pmId } });
+  }
+
+  public openCreateProduct(): void {
+    this.closeMobileSidebar();
+    this.router.navigate(['/masterform/product/new'], { queryParams: { pmId: this.pmId } });
+  }
+
+  public openPmList(): void {
+    this.closeMobileSidebar();
+    this.router.navigate(['/masterform/pms'], { queryParams: { pmId: this.pmId } });
+  }
+
+  public openCreatePmForm(): void {
+    this.closeMobileSidebar();
+    this.router.navigate(['/masterform/pm/new'], { queryParams: { pmId: this.pmId } });
+  }
+
+  public openPerformanceDashboard(): void {
+    this.closeMobileSidebar();
+    this.router.navigate(['/pm/performance']);
+  }
+
+  private closeMobileSidebar(): void {
+    if (this.isMobile) {
+      this.sidebarOpen = false;
+    }
+  }
+
+  private updateStatusOptionsWithTicketStatuses(): void {
+    const existingStatuses = new Set(this.statusOptions);
+    this.allTickets.forEach(ticket => {
+      if (ticket.status && !existingStatuses.has(ticket.status)) {
+        this.statusOptions.push(ticket.status);
+        existingStatuses.add(ticket.status);
+      }
+    });
+  }
+
+  public setTicketOwnershipFilter(filter: 'all' | 'mine' | 'juniors'): void {
+    this.pmTicketFilter = filter;
+    this.currentPage = 1;
+    this.applyFiltersAndPagination();
+  }
+
+  private applyFiltersAndPagination(): void {
+    // 1. First, filter by ownership to find the base set of tickets
+    let ownershipTickets = [...this.allTickets];
+
+    if (this.pmTicketFilter === 'mine') {
+      ownershipTickets = ownershipTickets.filter(ticket => 
+        ticket.assignedToNumber === this.currentUser?.userNumber
+      );
+    } else if (this.pmTicketFilter === 'juniors') {
+      ownershipTickets = ownershipTickets.filter(ticket => 
+        ticket.assignedToNumber !== this.currentUser?.userNumber && ticket.assignedToNumber != null
+      );
+    }
+
+    // 2. Compute dynamic stats on the ownership-filtered subset
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+
+    const totalPendingCount = ownershipTickets.filter(ticket => {
+      const statusLower = ticket.status ? ticket.status.toLowerCase() : '';
+      return !['closed', 'resolved'].includes(statusLower);
+    }).length;
+
+    const forReviewCount = ownershipTickets.filter(ticket => {
+      const statusLower = ticket.status ? ticket.status.toLowerCase() : '';
+      return statusLower.includes('review') || statusLower.includes('work done') || statusLower.includes('pm review');
+    }).length;
+
+    const urgentCount = ownershipTickets.filter(ticket => 
+      ticket.priority === 'Urgent'
+    ).length;
+
+    const delayedCount = ownershipTickets.filter(ticket => {
+      const statusLower = ticket.status ? ticket.status.toLowerCase() : '';
+      if (['closed', 'resolved', 'on hold'].includes(statusLower)) {
+        return false;
+      }
+      const deadlineStr = (ticket as any).deadline || ticket.deadline;
+      if (!deadlineStr) return false;
+      const deadlineDate = new Date(deadlineStr);
+      return deadlineDate < now;
+    }).length;
+
+    const newTodayCount = ownershipTickets.filter(ticket => {
+      if (!ticket.createdOn) return false;
+      const ticketDate = new Date(ticket.createdOn);
+      ticketDate.setHours(0, 0, 0, 0);
+      return ticketDate.getTime() === today.getTime();
+    }).length;
+
+    this.displayStats = {
+      totalPending: totalPendingCount,
+      forReview: forReviewCount,
+      urgentTickets: urgentCount,
+      delayedTickets: delayedCount,
+      newToday: newTodayCount
+    };
+
+    // 3. Now apply additional status presets and filters to the displayed tickets
+    let processingTickets = [...ownershipTickets];
+
+    if (this.searchTicketNumber && this.searchTicketNumber.trim()) {
+      const q = this.searchTicketNumber.toLowerCase().trim();
+      processingTickets = processingTickets.filter(ticket => 
+        ticket.ticketNumber && ticket.ticketNumber.toLowerCase().includes(q)
+      );
+    }
+
+    if (this.activeStatFilter) {
+        processingTickets = processingTickets.filter(ticket => {
+            const ticketStatusLower = ticket.status ? ticket.status.toLowerCase() : '';
+            switch (this.activeStatFilter) {
+                case 'pending':
+                    return !['closed', 'resolved'].includes(ticketStatusLower);
+                case 'review':
+                    return ticketStatusLower.includes('review') || ticketStatusLower.includes('work done') || ticketStatusLower.includes('pm review');
+                case 'closed':
+                    return ['closed', 'resolved'].includes(ticketStatusLower);
+                case 'urgent':
+                    return ticket.priority === 'Urgent';
+                case 'new':
+                    if (!ticket.createdOn) return false;
+                    const ticketDate = new Date(ticket.createdOn);
+                    ticketDate.setHours(0, 0, 0, 0);
+                    return ticketDate.getTime() === today.getTime();
+                case 'delayed':
+                    if (['closed', 'resolved', 'on hold'].includes(ticketStatusLower)) {
+                      return false;
+                    }
+                    const deadlineStr = (ticket as any).deadline || ticket.deadline;
+                    if (!deadlineStr) return false;
+                    const deadlineDate = new Date(deadlineStr);
+                    return deadlineDate < now;
+                default:
+                    return true;
+            }
+        });
+    }
+
+    if (this.sortField) {
+      processingTickets.sort((a, b) => {
+        const aVal = this.getFieldValue(a, this.sortField);
+        const bVal = this.getFieldValue(b, this.sortField);
+        let comparison = 0;
+        if (aVal < bVal) comparison = -1;
+        else if (aVal > bVal) comparison = 1;
+        return this.sortDirection === 'desc' ? comparison * -1 : comparison;
+      });
+    }
+
+    const sprintList = processingTickets.filter(t => t.sprintId != null || t.sprintName);
+    const priorityMap: { [key: string]: number } = { 'Urgent': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
+    this.sprintTickets = sprintList.sort((a, b) => {
+      const isClosedA = a.status?.toLowerCase() === 'closed' || a.status?.toLowerCase() === 'close';
+      const isClosedB = b.status?.toLowerCase() === 'closed' || b.status?.toLowerCase() === 'close';
+      if (isClosedA !== isClosedB) {
+        return isClosedA ? 1 : -1;
+      }
+      if (a.sprintOrder !== null && a.sprintOrder !== undefined && b.sprintOrder !== null && b.sprintOrder !== undefined) {
+        return a.sprintOrder - b.sprintOrder;
+      }
+      const priorityA = priorityMap[a.priority || ''] || 0;
+      const priorityB = priorityMap[b.priority || ''] || 0;
+      return priorityB - priorityA;
+    });
+    this.filteredTickets = processingTickets;
+    this.totalRecords = processingTickets.length;
+    this.totalPages = Math.ceil(this.totalRecords / this.pageSize);
+    
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    this.paginatedTickets = processingTickets.slice(startIndex, endIndex);
+    
+    this.ticketsSubject.next(this.paginatedTickets);
+  }
+
+  private getFieldValue(obj: any, field: string): any {
+    return field.split('.').reduce((o, key) => o && o[key], obj) || '';
+  }
+
+  public onTicketClick(ticket: Ticket): void {
+    this.closeMobileSidebar();
+    if (ticket.id) {
+      this.router.navigate(['/pm/ticket', ticket.id]);
+    }
+  }
+
+  public onFilterChange(): void {
+    this.activeStatFilter = null;
+    this.currentPage = 1;
+    this.loadTickets();
+  }
+
+  public onStatCardClick(statType: 'pending' | 'review' | 'urgent' | 'new' | 'delayed'): void {
+    if (this.activeStatFilter === statType) {
+        this.activeStatFilter = null;
+    } else {
+        this.activeStatFilter = statType;
+    }
+    this.selectedStatus = null;
+    this.selectedPriority = null;
+    this.selectedCustomer = null;
+    this.selectedAssignee = null;
+    this.searchTicketNumber = '';
+    this.currentPage = 1;
+    this.loadTickets();
+  }
+
+  public onSearchInputChange(): void {
+    this.currentPage = 1;
+    this.applyFiltersAndPagination();
+  }
+
+  public clearAllFilters(): void {
+    this.selectedStatus = null;
+    this.selectedPriority = null;
+    this.selectedAssignee = null;
+    this.selectedCustomer = null;
+    this.searchTicketNumber = '';
+    this.activeStatFilter = null;
+    this.currentPage = 1;
+    this.loadTickets();
+    this.updateSearchInputs();
+  }
+
+  public toggleFilterSection(): void {
+    this.showFilterSection = !this.showFilterSection;
+  }
+
+  public getActiveFiltersCount(): number {
+    let count = 0;
+    if (this.selectedStatus) count++;
+    if (this.selectedPriority) count++;
+    if (this.selectedAssignee !== null) count++;
+    if (this.selectedCustomer !== null) count++;
+    if (this.searchTicketNumber && this.searchTicketNumber.trim()) count++;
+    return count;
+  }
+  
+  public onSort(field: string): void {
+    if (this.sortField === field) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortField = field;
+      this.sortDirection = 'asc';
+    }
+    this.applyFiltersAndPagination();
+  }
+
+  public getSortIcon(field: string): string {
+    if (this.sortField !== field) return 'up-down';
+    return this.sortDirection === 'asc' ? 'up' : 'down';
+  }
+
+  public onPageChange(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.applyFiltersAndPagination();
+    }
+  }
+
+  public onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.applyFiltersAndPagination();
+  }
+  
+  public refresh(): void {
+    this.loadTickets();
+    this.loadStats(this.pmId);
+  }
+
+  public getPageNumbers(): number[] {
+    const pages = [];
+    const maxVisible = this.isMobile ? 3 : 5;
+    let start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(this.totalPages, start + maxVisible - 1);
+    
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  public getEndRecord(): number {
+    const end = this.getStartRecord() + this.paginatedTickets.length - 1;
+    return this.totalRecords === 0 ? 0 : end;
+  }
+
+  public getStartRecord(): number {
+    return this.totalRecords === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+  }
+  
+  public formatDate(dateString?: string | Date | null): string {
+    if (!dateString) return '';
+    const dateObj = new Date(dateString);
+    if (isNaN(dateObj.getTime())) return '';
+    return dateObj.toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  public formatDateTime(dateString?: string | Date | null): string {
+    if (!dateString) return '';
+    const dateObj = new Date(dateString);
+    if (isNaN(dateObj.getTime())) return '';
+    return dateObj.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
+
+  public exportTicketsReport(): void {
+    const listToExport: Ticket[] = (this.filteredTickets && this.filteredTickets.length > 0) ? this.filteredTickets : this.allTickets;
+    if (!listToExport || listToExport.length === 0) {
+      alert('No tickets available to export.');
+      return;
+    }
+
+    const origin = window.location.origin;
+
+    const headers = [
+      'Ticket Number',
+      'Subject',
+      'Description',
+      'Customer Name',
+      'Customer Code',
+      'Module',
+      'SubModule',
+      'Category',
+      'Status',
+      'Priority',
+      'Assigned To',
+      'Created Date (IST)',
+      'Last Updated Date (IST)',
+      'SLA / Deadline Date (IST)',
+      'Attachment File Names',
+      'Attachment Download Links'
+    ];
+
+    const sanitizeCell = (val: any): string => {
+      if (val === null || val === undefined) return '""';
+      let str = val.toString();
+      // Remove HTML tags
+      str = str.replace(/<[^>]*>/g, ' ');
+      // Replace line breaks and carriage returns with spaces
+      str = str.replace(/[\r\n]+/g, ' ');
+      // Collapse multiple whitespace spaces into a single space
+      str = str.replace(/\s+/g, ' ').trim();
+      // Escape double quotes by doubling them
+      str = str.replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = listToExport.map((t: Ticket) => {
+      let rawDesc = t.description || t.subject || '';
+
+      let rawCode = (t.customerCode || (t as any).userNumber || t.createdBy || t.customerId || '').toString().trim();
+      let formattedCustCode = rawCode ? (rawCode.startsWith('CS-') ? rawCode : 'CS-' + rawCode) : 'CS-N/A';
+
+      let moduleName = t.module || t.product || 'General';
+      let subModuleName = t.subModule || t.subCategory || 'General';
+
+      let categoryName = t.category || (t as any).issueCategory || 'General';
+
+      let attachmentNames = 'None';
+      let attachmentLinks = 'None';
+
+      if (t.attachments && t.attachments.length > 0) {
+        attachmentNames = t.attachments.map((att: any) => att.fileName || 'Attachment').join(' | ');
+        attachmentLinks = t.attachments.map((att: any) => 
+          `${origin}/api/Tickets/${t.id}/attachments/${att.id || att.fileName}`
+        ).join(' | ');
+      } else if (t.hasAttachment || (t.attachmentCount && t.attachmentCount > 0)) {
+        attachmentNames = `${t.attachmentCount || 1} Attachment(s)`;
+        attachmentLinks = `${origin}/api/Tickets/${t.id}/details`;
+      }
+
+      return [
+        sanitizeCell(t.ticketNumber || `TKT-${t.id}`),
+        sanitizeCell(t.subject || ''),
+        sanitizeCell(rawDesc),
+        sanitizeCell(t.customerName || t.customerEmail || 'Customer'),
+        sanitizeCell(formattedCustCode),
+        sanitizeCell(moduleName),
+        sanitizeCell(subModuleName),
+        sanitizeCell(categoryName),
+        sanitizeCell(t.status || ''),
+        sanitizeCell(t.priority || ''),
+        sanitizeCell(t.assignedToName || t.assignedTo || 'Unassigned'),
+        sanitizeCell(this.formatDateTime(t.createdOn)),
+        sanitizeCell(this.formatDateTime(t.updatedOn)),
+        sanitizeCell(this.formatDateTime(t.deadline)),
+        sanitizeCell(attachmentNames),
+        sanitizeCell(attachmentLinks)
+      ];
+    });
+
+    const headerLine = '\ufeff' + headers.map(h => `"${h.replace(/"/g, '""')}"`).join(',');
+    const rowLines = rows.map((r: string[]) => r.join(','));
+    const csvString = [headerLine, ...rowLines].join('\r\n');
+
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Tickets_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  public getStatusClass(status: string): string {
+    const statusMap: { [key: string]: string } = {
+      'New': 'status-new', 'In Progress': 'status-progress',
+      'Pending': 'status-pending', 'Resolved': 'status-resolved', 'Closed': 'status-closed',
+      'On Hold': 'status-hold', 'Assigned': 'status-assigned'
+    };
+    return statusMap[status] || 'status-default';
+  }
+
+  public getPriorityClass(priority: string): string {
+    const priorityMap: { [key: string]: string } = {
+      'Low': 'priority-low', 'Medium': 'priority-medium',
+      'High': 'priority-high', 'Urgent': 'priority-urgent'
+    };
+    return priorityMap[priority] || 'priority-default';
+  }
+
+  public getTicketAgeClass(dateString: string | null, status?: string, lastUpdatedOn?: string | null): string {
+    if (!dateString) return '';
+
+    const now = new Date();
+    const createdDate = new Date(dateString);
+    const differenceInMs = now.getTime() - createdDate.getTime();
+    const daysElapsed = Math.floor(differenceInMs / (1000 * 60 * 60 * 24));
+
+    const classes: string[] = [];
+
+    if (status && status.toLowerCase() === 'closed') {
+      classes.push('age-closed');
+    } else {
+      if (daysElapsed >= 15) {
+        classes.push('age-critical', 'blink-aggressive');
+      } else if (daysElapsed >= 7) {
+        classes.push('age-high', 'blink-subtle');
+      } else if (daysElapsed >= 3) {
+        classes.push('age-medium');
+      } else {
+        classes.push('age-new');
+      }
+    }
+    return classes.join(' ');
+  }
+
+  public getTimeElapsed(dateString?: string | Date | null, isClosed: boolean = false): string {
+    if (!dateString) return '';
+
+    const now = new Date().getTime();
+    const eventDate = new Date(dateString).getTime();
+    const seconds = Math.floor((now - eventDate) / 1000);
+
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " year(s) ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " month(s) ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " day(s) ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hour(s) ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minute(s) ago";
+    return "just now";
+  }
+
+  public formatDeadline(deadlineDate: string | null | undefined): string {
+    if (!deadlineDate) return 'No deadline';
+    
+    const deadline = new Date(deadlineDate);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    deadline.setHours(0, 0, 0, 0);
+    
+    const diffTime = deadline.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return `Overdue by ${Math.abs(diffDays)}d`;
+    } else if (diffDays === 0) {
+      return 'Due today';
+    } else if (diffDays === 1) {
+      return 'Due tomorrow';
+    } else {
+      return `${diffDays}d remaining`;
+    }
+  }
+
+  public getDeadlineClass(deadlineDate: string | null | undefined): string {
+    if (!deadlineDate) return 'deadline-none';
+    
+    const deadline = new Date(deadlineDate);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    deadline.setHours(0, 0, 0, 0);
+    
+    const diffTime = deadline.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return 'deadline-overdue';
+    if (diffDays <= 1) return 'deadline-urgent';
+    if (diffDays <= 3) return 'deadline-soon';
+    return 'deadline-normal';
+  }
+
+  public getFilterSummary(): string {
+    const filters = [];
+    if (this.selectedStatus) {
+      filters.push(`Status: ${this.selectedStatus}`);
+    }
+    if (this.selectedPriority) {
+      filters.push(`Priority: ${this.selectedPriority}`);
+    }
+    if (this.selectedAssignee !== null) {
+      const assignee = this.assigneeOptions.find(a => a.assigneeNumber === this.selectedAssignee);
+      if (assignee) {
+        filters.push(`Assignee: ${assignee.name}`);
+      }
+    }
+    if (this.selectedCustomer !== null) {
+      const customer = this.allCustomers.find(c => c.id === this.selectedCustomer);
+      if (customer) {
+        filters.push(`Customer: ${customer.fullName}`);
+      }
+    }
+    if (this.activeStatFilter) {
+      const filterName = this.activeStatFilter.charAt(0).toUpperCase() + this.activeStatFilter.slice(1);
+      filters.push(`Preset: ${filterName}`);
+    }
+    if (this.searchTicketNumber && this.searchTicketNumber.trim()) {
+      filters.push(`Ticket #: ${this.searchTicketNumber}`);
+    }
+    return filters.length > 0 ? filters.join(' | ') : 'All Tickets';
+  }
+
+  public navigateToSelectCustomer(): void {
+    this.closeMobileSidebar();
+    this.showCustomerSelect = true;
+    this.customerListIsLoading = true;
+
+    // Always ensure data is loaded and filtered list is ready
+    this.loadAllCustomers().then(() => {
+      this.customerListIsLoading = false;
+    }).catch(() => {
+      this.customerListIsLoading = false;
+    });
+  }
+
+  public closeCustomerSelect(): void {
+    this.showCustomerSelect = false;
+    this.customerSearchTerm = '';
+    this.filteredCustomers = [...this.allCustomers];
+    
+    // Clear the query parameter so clicking 'New Issue' works again without reloading
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { openCreateDrawer: null },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  public filterCustomers(): void {
+    if (!this.customerSearchTerm) {
+      this.filteredCustomers = [...this.allCustomers];
+      return;
+    }
+    const lowerTerm = this.customerSearchTerm.toLowerCase();
+    
+    this.filteredCustomers = this.allCustomers.filter(cust =>
+      (cust.fullName?.toLowerCase().includes(lowerTerm)) ||
+      (cust.userNumber?.toLowerCase().includes(lowerTerm))
+    );
+  }
+  // pm-dashboard.component.ts
+
+/** Reloads the entire page when the Refresh button is clicked */
+public refreshDashboard(): void {
+  window.location.reload();   // <-- forces a full page reload
+}
+  public selectCustomer(customer: User): void { 
+    this.showCustomerSelect = false; 
+    this.customerSearchTerm = '';     
+    
+    // Clear query param so it doesn't reopen if they click 'Back' in browser
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { openCreateDrawer: null },
+      queryParamsHandling: 'merge'
+    }).then(() => {
+      this.router.navigate(
+        ['/customer/ticket-create'], 
+        { queryParams: { pmId: this.pmId, customerId: customer.id } }
+      );
+    });
+  }
+
+  // --- PLANE KANBAN HELPER PROPERTIES & METHODS ---
+  public viewMode: 'list' | 'board' = 'board';
+
+  public setViewMode(mode: 'list' | 'board'): void {
+    this.viewMode = mode;
+  }
+
+  public getTicketsByStatus(status: string): Ticket[] {
+    // If a status filter is selected, only show that column or tickets matching it
+    if (this.selectedStatus && this.selectedStatus !== status) {
+      return [];
+    }
+    return this.paginatedTickets.filter(t => t.status === status);
+  }
+
+  public getStatusDotClass(status: string): string {
+    const map: { [k: string]: string } = { 
+      'Open': 'bg-blue-500', 
+      'In Progress': 'bg-amber-500', 
+      'Work Done': 'bg-emerald-500', 
+      'Rework': 'bg-red-500', 
+      'Closed': 'bg-gray-500',
+      'On Hold': 'bg-amber-700',
+      'Assigned': 'bg-indigo-500'
+    };
+    return map[status] || 'bg-gray-500';
+  }
+
+  public getOrderedStatusOptions(): string[] {
+    const list = [...this.statusOptions];
+    const openIndex = list.findIndex(s => s.toLowerCase() === 'open');
+    let openValue = 'Open';
+    if (openIndex !== -1) {
+      openValue = list[openIndex];
+      list.splice(openIndex, 1);
+    }
+    const counts: { [status: string]: number } = {};
+    list.forEach(status => {
+      counts[status] = this.allTickets.filter(t => t.status === status).length;
+    });
+    list.sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+    return [openValue, ...list];
+  }
+
+  @HostListener('document:click', ['$event'])
+  public onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.developer-dropdown-container')) {
+      if (this.showDeveloperDropdown) {
+        this.showDeveloperDropdown = false;
+        this.updateSearchInputs();
+      }
+    }
+    if (!target.closest('.customer-dropdown-container')) {
+      if (this.showCustomerDropdown) {
+        this.showCustomerDropdown = false;
+        this.updateSearchInputs();
+      }
+    }
+  }
+
+  public updateSearchInputs(): void {
+    if (this.selectedAssignee !== null) {
+      const dev = this.assigneeOptions.find(d => d.assigneeNumber === this.selectedAssignee);
+      this.developerSearchInput = dev ? dev.name : '';
+    } else {
+      this.developerSearchInput = 'All Developers';
+    }
+
+    if (this.selectedCustomer !== null) {
+      const cust = this.allCustomers.find(c => c.id === this.selectedCustomer);
+      this.customerSearchInput = cust ? cust.fullName : '';
+    } else {
+      this.customerSearchInput = 'All Customers';
+    }
+  }
+
+  public selectDeveloperFilter(assignee: any | null): void {
+    if (assignee) {
+      this.selectedAssignee = assignee.assigneeNumber;
+      this.developerSearchInput = assignee.name;
+    } else {
+      this.selectedAssignee = null;
+      this.developerSearchInput = 'All Developers';
+    }
+    this.showDeveloperDropdown = false;
+    this.onFilterChange();
+  }
+
+  public selectCustomerFilter(customer: any | null): void {
+    if (customer) {
+      this.selectedCustomer = customer.id;
+      this.customerSearchInput = customer.fullName;
+    } else {
+      this.selectedCustomer = null;
+      this.customerSearchInput = 'All Customers';
+    }
+    this.showCustomerDropdown = false;
+    this.onFilterChange();
+  }
+
+  public get filteredDeveloperOptions(): any[] {
+    const term = this.developerSearchInput.toLowerCase().trim();
+    if (!term || term === 'all developers') return this.assigneeOptions;
+    return this.assigneeOptions.filter(d => 
+      d.name.toLowerCase().includes(term) || 
+      d.assigneeNumber.toString().includes(term)
+    );
+  }
+
+  public get filteredCustomerOptions(): any[] {
+    const term = this.customerSearchInput.toLowerCase().trim();
+    if (!term || term === 'all customers') return this.allCustomers;
+    return this.allCustomers.filter(c => 
+      c.fullName.toLowerCase().includes(term) || 
+      (c.userNumber && c.userNumber.toLowerCase().includes(term))
+    );
+  }
+
+
+  public getRemainingSprintTasksCount(): number {
+    return this.sprintTickets.filter(t => {
+      const statusLower = t.status ? t.status.toLowerCase() : '';
+      return !['closed', 'resolved', 'close'].includes(statusLower);
+    }).length;
+  }
+
+}

@@ -1,0 +1,1611 @@
+<div class="perf-container">
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <!-- TOP BREADCRUMB & HEADER -->
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <header class="perf-header">
+    <div class="header-left">
+      <nav class="breadcrumb-nav">
+        <button class="breadcrumb-item" [class.active]="activeView === 'overview'" (click)="backToOverview()">
+          <span class="icon">🏠</span> Enterprise Overview
+        </button>
+
+        <ng-container *ngIf="activeView === 'location' && locationDetail">
+          <span class="separator">/</span>
+          <span class="breadcrumb-item active">
+            <span class="icon">📍</span> {{ locationDetail.location.locationName }} ({{ locationDetail.location.locationCode }})
+          </span>
+        </ng-container>
+
+        <ng-container *ngIf="activeView === 'customer' && customerDetail">
+          <span class="separator">/</span>
+          <span class="breadcrumb-item active">
+            <span class="icon">👥</span> {{ customerDetail.customer.customerName }}
+          </span>
+        </ng-container>
+
+        <ng-container *ngIf="activeView === 'user' && userDetail">
+          <span class="separator">/</span>
+          <span class="breadcrumb-item active">
+            <span class="icon">👤</span> {{ userDetail.user.name || userDetail.user.userName }}
+          </span>
+        </ng-container>
+
+        <ng-container *ngIf="activeView === 'team' && teamDetail">
+          <span class="separator">/</span>
+          <span class="breadcrumb-item active">
+            <span class="icon">🛡️</span> {{ teamDetail.team.managerName || teamDetail.team.roleName }} Team
+          </span>
+        </ng-container>
+      </nav>
+
+      <h1 class="main-title">
+        <ng-container *ngIf="activeView === 'overview'">TMS Performance Analytics Hub</ng-container>
+        <ng-container *ngIf="activeView === 'location'">Location Intelligence & Drill-Down</ng-container>
+        <ng-container *ngIf="activeView === 'customer'">Customer Performance & Issues 360°</ng-container>
+        <ng-container *ngIf="activeView === 'user'">Staff Member Performance Profile</ng-container>
+        <ng-container *ngIf="activeView === 'team'">Team Hierarchy & Resolution Analytics</ng-container>
+      </h1>
+      <p class="subtitle">
+        Real-time multi-location logistics CRM intelligence & ticketing analytics
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <!-- Filters toggle button with active count -->
+      <button class="btn-toggle-filters" 
+              *ngIf="activeView === 'overview'"
+              [class.active]="showFilterSection || getActiveFiltersCount() > 0"
+              (click)="toggleFilterSection()">
+        <span class="filter-icon">⚡</span>
+        Filters
+        <span class="filter-badge" *ngIf="getActiveFiltersCount() > 0">
+          {{ getActiveFiltersCount() }}
+        </span>
+      </button>
+
+      <!-- Quick Clear button in header -->
+      <button class="btn-clear-header" 
+              *ngIf="activeView === 'overview' && getActiveFiltersCount() > 0"
+              (click)="resetFilters()"
+              title="Reset all filters">
+        ✕ Clear
+      </button>
+
+      <div class="live-tag">
+        <span class="pulse-dot"></span> Live Sync
+      </div>
+      <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoadingOverview">
+        <span [class.spinning]="isLoadingOverview">⟳</span> Refresh
+      </button>
+    </div>
+  </header>
+
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <!-- GLOBAL INTERACTIVE FILTER BAR (Collapsible) -->
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <section class="global-filter-bar" *ngIf="activeView === 'overview' && showFilterSection">
+    <div class="filter-controls-row">
+      <div class="filter-item">
+        <label class="filter-lbl">📅 Period</label>
+        <select class="filter-select" [(ngModel)]="selectedPeriod" (change)="loadOverview()">
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+          <option value="last30">Last 30 Days</option>
+          <option value="custom">Custom Range</option>
+        </select>
+      </div>
+
+      <div *ngIf="selectedPeriod === 'custom'" class="filter-item date-range-group">
+        <label class="filter-lbl">From</label>
+        <input type="date" class="filter-input" [(ngModel)]="customFromDate" (change)="loadOverview()" />
+        <label class="filter-lbl">To</label>
+        <input type="date" class="filter-input" [(ngModel)]="customToDate" (change)="loadOverview()" />
+      </div>
+
+      <div class="filter-item" *ngIf="overviewData?.locations?.length">
+        <label class="filter-lbl">📍 Location</label>
+        <select class="filter-select" [(ngModel)]="selectedFilterLocation" (change)="loadOverview()">
+          <option [value]="0">All Locations</option>
+          <option *ngFor="let l of overviewData?.locations" [value]="l.locationId">
+            {{ l.locationCode ? l.locationCode + ' - ' : '' }}{{ l.locationName }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label class="filter-lbl">⚡ Status</label>
+        <select class="filter-select" [(ngModel)]="selectedFilterStatus" (change)="loadOverview()">
+          <option value="">All Statuses</option>
+          <option value="Resolved">Resolved Only</option>
+          <option value="Unresolved">Unresolved Only</option>
+          <option value="Open">Open</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Rework">Rework</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label class="filter-lbl">🔥 Priority</label>
+        <select class="filter-select" [(ngModel)]="selectedFilterPriority" (change)="loadOverview()">
+          <option value="">All Priorities</option>
+          <option value="Urgent">Urgent</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Active filters display strip at the bottom of panel -->
+    <div class="filter-summary-row">
+      <span class="filter-summary-text">Active: {{ getFilterSummary() }}</span>
+      <button class="btn-clear-filter" *ngIf="getActiveFiltersCount() > 0" (click)="resetFilters()" title="Reset all filters">
+        ✕ Clear All
+      </button>
+    </div>
+  </section>
+
+  <!-- ERROR NOTIFICATION -->
+  <div *ngIf="errorMessage" class="error-banner">
+    <span class="error-icon">⚠️</span>
+    <span>{{ errorMessage }}</span>
+    <button class="btn-close" (click)="errorMessage = null">✕</button>
+  </div>
+
+  <!-- LOADING STATE -->
+  <div *ngIf="isLoadingOverview && !overviewData" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading enterprise analytics from TMS & Ticketing engines...</p>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <!-- 1. MAIN OVERVIEW VIEW -->
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <main *ngIf="activeView === 'overview' && overviewData" class="overview-view">
+    <!-- TOP KPI STAT CARDS -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon-box bg-blue">🎫</div>
+        <div class="kpi-body">
+          <span class="kpi-label">Total Enterprise Tickets</span>
+          <div class="kpi-value">{{ overviewData.summary.totalTickets | number }}</div>
+          <div class="kpi-meta">
+            <span class="text-green">✓ {{ overviewData.summary.resolvedTickets }} resolved</span>
+            <span class="separator">•</span>
+            <span class="text-rose">⚠ {{ overviewData.summary.unresolvedTickets }} unresolved</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon-box bg-emerald">✅</div>
+        <div class="kpi-body">
+          <span class="kpi-label">Overall Resolution Rate</span>
+          <div class="kpi-value">{{ overviewData.summary.resolutionRate }}%</div>
+          <div class="progress-track">
+            <div class="progress-bar bg-emerald" [style.width.%]="overviewData.summary.resolutionRate"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon-box bg-purple">📍</div>
+        <div class="kpi-body">
+          <span class="kpi-label">Operational Locations</span>
+          <div class="kpi-value">{{ overviewData.summary.totalLocations }} <span class="unit">locations</span></div>
+          <div class="kpi-meta">TMS Network branches & hubs</div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon-box bg-indigo">👥</div>
+        <div class="kpi-body">
+          <span class="kpi-label">Active Customers</span>
+          <div class="kpi-value">{{ overviewData.summary.totalCustomers }}</div>
+          <div class="kpi-meta">With logged support tickets</div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon-box bg-amber">⚡</div>
+        <div class="kpi-body">
+          <span class="kpi-label">Average Resolution Time</span>
+          <div class="kpi-value">{{ overviewData.summary.avgResolutionHours }} <span class="unit">hrs</span></div>
+          <div class="kpi-meta">Across all resolved tickets</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- VISUAL CHART SECTION (build-dashboard skill) -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section class="charts-section-grid">
+      <div class="chart-panel primary-chart">
+        <div class="chart-panel-header">
+          <div>
+            <span class="chart-category">Velocity & Volume</span>
+            <h3 class="chart-title">Top Locations Resolution Comparison</h3>
+          </div>
+          <span class="chart-badge">Live TMS Sync</span>
+        </div>
+        <div class="canvas-container">
+          <canvas id="overview-loc-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-panel secondary-chart">
+        <div class="chart-panel-header">
+          <div>
+            <span class="chart-category">Department Breakdown</span>
+            <h3 class="chart-title">Tickets by Module</h3>
+          </div>
+        </div>
+        <div class="canvas-container">
+          <canvas id="overview-dept-chart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION NAVIGATION TABS -->
+    <div class="nav-tabs-bar">
+      <button class="nav-tab-btn" [class.active]="activeTab === 'locations'" (click)="setTab('locations')">
+        🏢 Locations Matrix ({{ overviewData.locations.length }})
+      </button>
+      <button class="nav-tab-btn" [class.active]="activeTab === 'customers'" (click)="setTab('customers')">
+        👥 Customers Comparison ({{ overviewData.topCustomers.length }})
+      </button>
+      <button class="nav-tab-btn" [class.active]="activeTab === 'departments'" (click)="setTab('departments')">
+        🏢 Departments / Modules ({{ overviewData.departments.length }})
+      </button>
+      <button class="nav-tab-btn" [class.active]="activeTab === 'teams'" (click)="setTab('teams')">
+        🛡️ Teams & Roles ({{ overviewData.teams.length }})
+      </button>
+      <button class="nav-tab-btn" [class.active]="activeTab === 'users'" (click)="setTab('users')">
+        🏆 Staff Leaderboard ({{ overviewData.topUsers.length }})
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 1: LOCATIONS MATRIX -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section *ngIf="activeTab === 'locations'" class="tab-content">
+      <!-- Toolbar -->
+      <div class="table-toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="Search location by name or code (e.g. BNG, Bengaluru)..."
+            [(ngModel)]="searchQuery"
+          />
+        </div>
+        <div class="toolbar-controls">
+          <label class="toggle-control">
+            <input type="checkbox" [(ngModel)]="filterActiveOnly" />
+            <span>Active Only</span>
+          </label>
+
+          <div class="select-wrapper">
+            <label>Sort by:</label>
+            <select [(ngModel)]="sortBy">
+              <option value="tickets">Most Tickets</option>
+              <option value="resolved">Most Resolved</option>
+              <option value="rate">Highest Resolution %</option>
+              <option value="name">Location Name</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Location Grid Cards -->
+      <div class="locations-grid">
+        <div
+          *ngFor="let loc of filteredLocations"
+          class="loc-card"
+          [class.has-tickets]="loc.totalTickets > 0"
+          (click)="openLocation(loc.locationId)"
+        >
+          <div class="loc-card-header">
+            <div>
+              <div class="loc-code-badge">{{ loc.locationCode }}</div>
+              <h3 class="loc-name">{{ loc.locationName }}</h3>
+            </div>
+            <div class="loc-arrow">→</div>
+          </div>
+
+          <div class="loc-stats-row">
+            <div class="loc-stat-col">
+              <span class="lbl">Total</span>
+              <span class="val font-semibold">{{ loc.totalTickets }}</span>
+            </div>
+            <div class="loc-stat-col text-green">
+              <span class="lbl">Resolved</span>
+              <span class="val font-semibold">{{ loc.resolvedTickets }}</span>
+            </div>
+            <div class="loc-stat-col text-rose">
+              <span class="lbl">Unresolved</span>
+              <span class="val font-semibold">{{ loc.unresolvedTickets }}</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="loc-progress-section">
+            <div class="loc-progress-labels">
+              <span>Resolution Rate</span>
+              <span class="font-semibold" [style.color]="getRateColor(loc.resolutionRate)">{{ loc.resolutionRate }}%</span>
+            </div>
+            <div class="progress-track">
+              <div
+                class="progress-bar"
+                [style.width.%]="loc.resolutionRate"
+                [style.backgroundColor]="getRateColor(loc.resolutionRate)"
+              ></div>
+            </div>
+          </div>
+
+          <div class="loc-card-footer">
+            <span class="meta-tag">👤 {{ loc.userCount }} Staff</span>
+            <span class="meta-tag">👥 {{ loc.customerCount }} Customers</span>
+            <span class="click-hint">View details →</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 2: CUSTOMERS COMPARISON -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section *ngIf="activeTab === 'customers'" class="tab-content">
+      <div class="table-toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="Search customer by name or code..."
+            [(ngModel)]="searchQuery"
+          />
+        </div>
+      </div>
+
+      <div class="table-card">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Code</th>
+              <th>Total Tickets</th>
+              <th>Resolved</th>
+              <th>Unresolved</th>
+              <th>Resolution %</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of filteredCustomers" class="clickable-row" (click)="openCustomer(c.customerId)">
+              <td>
+                <div class="customer-cell">
+                  <div class="avatar-box bg-purple">{{ getUserInitials(c.customerName) }}</div>
+                  <div>
+                    <div class="cell-title">{{ c.customerName }}</div>
+                    <div class="cell-sub">ID: #{{ c.customerId }}</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="code-pill">{{ c.customerCode || '—' }}</span></td>
+              <td class="font-bold">{{ c.totalTickets }}</td>
+              <td><span class="text-green font-semibold">✓ {{ c.resolvedTickets }}</span></td>
+              <td><span class="text-rose font-semibold">⚠ {{ c.unresolvedTickets }}</span></td>
+              <td>
+                <div class="inline-progress">
+                  <div class="progress-track small">
+                    <div
+                      class="progress-bar"
+                      [style.width.%]="c.resolutionRate"
+                      [style.backgroundColor]="getRateColor(c.resolutionRate)"
+                    ></div>
+                  </div>
+                  <span class="rate-text">{{ c.resolutionRate }}%</span>
+                </div>
+              </td>
+              <td>
+                <button class="btn-detail-link" (click)="openCustomer(c.customerId); $event.stopPropagation()">
+                  360° Issues Summary →
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 3: DEPARTMENTS / MODULES -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section *ngIf="activeTab === 'departments'" class="tab-content">
+      <div class="cards-duo-grid">
+        <div *ngFor="let dept of overviewData.departments" class="dept-summary-card">
+          <div class="dept-card-header">
+            <div>
+              <span class="category-tag">Department Module</span>
+              <h3 class="dept-title">{{ dept.moduleName }}</h3>
+            </div>
+            <div class="dept-total-badge">{{ dept.totalTickets }} Tickets</div>
+          </div>
+
+          <div class="dept-metrics-row">
+            <div class="metric-box">
+              <span class="m-label">Resolved</span>
+              <span class="m-val text-green">{{ dept.resolvedTickets }}</span>
+            </div>
+            <div class="metric-box">
+              <span class="m-label">Unresolved</span>
+              <span class="m-val text-rose">{{ dept.unresolvedTickets }}</span>
+            </div>
+            <div class="metric-box">
+              <span class="m-label">Resolution Rate</span>
+              <span class="m-val" [style.color]="getRateColor(dept.resolutionRate)">{{ dept.resolutionRate }}%</span>
+            </div>
+          </div>
+
+          <div class="progress-track">
+            <div
+              class="progress-bar"
+              [style.width.%]="dept.resolutionRate"
+              [style.backgroundColor]="getRateColor(dept.resolutionRate)"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 4: TEAMS & ROLES -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section *ngIf="activeTab === 'teams'" class="tab-content">
+      <div class="table-toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="Search teams by manager name, role, or designation..."
+            [(ngModel)]="searchQuery"
+          />
+        </div>
+      </div>
+
+      <div class="cards-duo-grid">
+        <div *ngFor="let team of filteredTeams" class="team-summary-card clickable" (click)="openTeam(team.roleId)">
+          <div class="team-card-header">
+            <div>
+              <span class="category-tag">Manager / Team Lead</span>
+              <h3 class="team-title">{{ team.managerName || team.roleName }}</h3>
+              <span class="team-sub-role" *ngIf="team.managerRole">{{ team.managerRole }}</span>
+            </div>
+            <div class="header-pills">
+              <span class="team-members-tag">👥 {{ team.userCount }} Direct Reports</span>
+              <span class="drilldown-arrow">→</span>
+            </div>
+          </div>
+
+          <div class="team-metrics-row">
+            <div class="metric-box">
+              <span class="m-label">Total Assigned</span>
+              <span class="m-val">{{ team.totalTickets }}</span>
+            </div>
+            <div class="metric-box">
+              <span class="m-label">Resolved</span>
+              <span class="m-val text-green">{{ team.resolvedTickets }}</span>
+            </div>
+            <div class="metric-box">
+              <span class="m-label">Unresolved</span>
+              <span class="m-val text-rose">{{ team.unresolvedTickets }}</span>
+            </div>
+            <div class="metric-box">
+              <span class="m-label">Success Rate</span>
+              <span class="m-val" [style.color]="getRateColor(team.resolutionRate)">{{ team.resolutionRate }}%</span>
+            </div>
+          </div>
+
+          <div class="progress-track">
+            <div
+              class="progress-bar"
+              [style.width.%]="team.resolutionRate"
+              [style.backgroundColor]="getRateColor(team.resolutionRate)"
+            ></div>
+          </div>
+
+          <div class="team-card-footer">
+            <span class="click-hint">🛡️ View Hierarchy & Member Stats →</span>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="filteredTeams.length === 0" class="empty-hint p-4 text-center">
+        No teams found matching "{{ searchQuery }}".
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 5: STAFF LEADERBOARD -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section *ngIf="activeTab === 'users'" class="tab-content">
+      <div class="table-toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="Search assignee by name, location, or role..."
+            [(ngModel)]="searchQuery"
+          />
+        </div>
+      </div>
+
+      <div class="table-card">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Staff Member</th>
+              <th>Location</th>
+              <th>Role</th>
+              <th>Total Assigned</th>
+              <th>Resolved</th>
+              <th>Open</th>
+              <th>Resolution %</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let u of filteredUsers; let i = index" class="clickable-row" (click)="openUser(u.userId)">
+              <td>
+                <span class="rank-badge" [class.top1]="i === 0" [class.top2]="i === 1" [class.top3]="i === 2">
+                  #{{ i + 1 }}
+                </span>
+              </td>
+              <td>
+                <div class="customer-cell">
+                  <div class="avatar-box bg-blue">{{ getUserInitials(u.userName) }}</div>
+                  <div>
+                    <div class="cell-title">{{ u.userName }}</div>
+                    <div class="cell-sub">User ID: #{{ u.userId }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="loc-tag" (click)="openLocation(u.locationId); $event.stopPropagation()">
+                  📍 {{ u.locationName }}
+                </span>
+              </td>
+              <td><span class="role-badge">{{ u.roleName }}</span></td>
+              <td class="font-bold">{{ u.totalTickets }}</td>
+              <td><span class="text-green font-semibold">✓ {{ u.resolvedTickets }}</span></td>
+              <td><span class="text-rose font-semibold">⚠ {{ u.openTickets }}</span></td>
+              <td>
+                <div class="inline-progress">
+                  <div class="progress-track small">
+                    <div
+                      class="progress-bar"
+                      [style.width.%]="u.resolutionRate"
+                      [style.backgroundColor]="getRateColor(u.resolutionRate)"
+                    ></div>
+                  </div>
+                  <span class="rate-text">{{ u.resolutionRate }}%</span>
+                </div>
+              </td>
+              <td>
+                <button class="btn-detail-link" (click)="openUser(u.userId); $event.stopPropagation()">
+                  View Profile →
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <!-- 2. LOCATION DRILL-DOWN VIEW -->
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <main *ngIf="activeView === 'location'" class="drilldown-view">
+    <div *ngIf="isLoadingDetail" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading location metrics...</p>
+    </div>
+
+    <ng-container *ngIf="!isLoadingDetail && locationDetail">
+      <!-- Location Banner -->
+      <section class="banner-card">
+        <div class="banner-top">
+          <button class="btn-back" (click)="backToOverview()">
+            ← Back to Enterprise Overview
+          </button>
+          <span class="banner-tag">📍 Operational Hub</span>
+        </div>
+
+        <div class="banner-main">
+          <div class="banner-info">
+            <div class="banner-code-pill">{{ locationDetail.location.locationCode }}</div>
+            <h2 class="banner-title">{{ locationDetail.location.locationName }}</h2>
+            <p class="banner-meta">
+              {{ locationDetail.location.address || 'Address on record with TMS' }}
+              <span *ngIf="locationDetail.location.hierarchy"> • Level {{ locationDetail.location.hierarchy }}</span>
+            </p>
+          </div>
+
+          <div class="banner-kpis">
+            <div class="banner-stat">
+              <span class="b-lbl">Total Tickets</span>
+              <span class="b-val">{{ locationDetail.kpi.totalTickets }}</span>
+            </div>
+            <div class="banner-stat text-green">
+              <span class="b-lbl">Resolved</span>
+              <span class="b-val">{{ locationDetail.kpi.resolvedTickets }}</span>
+            </div>
+            <div class="banner-stat text-rose">
+              <span class="b-lbl">Unresolved</span>
+              <span class="b-val">{{ locationDetail.kpi.unresolvedTickets }}</span>
+            </div>
+            <div class="banner-stat">
+              <span class="b-lbl">Resolution Rate</span>
+              <span class="b-val" [style.color]="getRateColor(locationDetail.kpi.resolutionRate)">
+                {{ locationDetail.kpi.resolutionRate }}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Location Department Chart -->
+      <section class="charts-section-grid single-chart">
+        <div class="chart-panel">
+          <div class="chart-panel-header">
+            <div>
+              <span class="chart-category">Department Performance</span>
+              <h3 class="chart-title">Module Distribution at {{ locationDetail.location.locationName }}</h3>
+            </div>
+          </div>
+          <div class="canvas-container height-260">
+            <canvas id="loc-dept-chart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Location Sub-Tabs -->
+      <div class="sub-nav-tabs">
+        <button
+          class="sub-tab-btn"
+          [class.active]="locationSubTab === 'departments'"
+          (click)="setLocationSubTab('departments')"
+        >
+          🏢 Departments & Users ({{ locationDetail.departments.length }})
+        </button>
+        <button
+          class="sub-tab-btn"
+          [class.active]="locationSubTab === 'teams'"
+          (click)="setLocationSubTab('teams')"
+        >
+          🛡️ Teams & Users ({{ locationDetail.teams.length }})
+        </button>
+        <button
+          class="sub-tab-btn"
+          [class.active]="locationSubTab === 'users'"
+          (click)="setLocationSubTab('users')"
+        >
+          👤 Stationed Staff ({{ locationDetail.users.length }})
+        </button>
+        <button
+          class="sub-tab-btn"
+          [class.active]="locationSubTab === 'customers'"
+          (click)="setLocationSubTab('customers')"
+        >
+          👥 Associated Customers ({{ locationDetail.customers.length }})
+        </button>
+        <button
+          class="sub-tab-btn"
+          [class.active]="locationSubTab === 'tickets'"
+          (click)="setLocationSubTab('tickets')"
+        >
+          🎫 Location Tickets ({{ locationDetail.recentTickets.length }})
+        </button>
+      </div>
+
+      <!-- SUB-TAB 1: DEPARTMENTS & USERS IN DEPT -->
+      <div *ngIf="locationSubTab === 'departments'" class="tab-pane">
+        <div class="accordion-list">
+          <div *ngFor="let dept of locationDetail.departments" class="accordion-item">
+            <div class="accordion-header" (click)="toggleDeptAccordion(dept.moduleId)">
+              <div class="header-left">
+                <span class="accordion-icon">🏢</span>
+                <div>
+                  <h4 class="accordion-title">{{ dept.moduleName }}</h4>
+                  <span class="accordion-sub">
+                    {{ dept.totalTickets }} Tickets • {{ dept.resolvedTickets }} Resolved • {{ dept.users.length }} Active Staff
+                  </span>
+                </div>
+              </div>
+              <div class="header-right">
+                <div class="inline-progress">
+                  <span class="rate-text" [style.color]="getRateColor(dept.resolutionRate)">{{ dept.resolutionRate }}%</span>
+                </div>
+                <span class="caret-icon">{{ expandedDeptId === dept.moduleId ? '▲' : '▼' }}</span>
+              </div>
+            </div>
+
+            <div *ngIf="expandedDeptId === dept.moduleId" class="accordion-body">
+              <h5 class="nested-title">Staff Members handling {{ dept.moduleName }} at this Location:</h5>
+              <div *ngIf="dept.users.length === 0" class="empty-hint">No specific assignees logged for this module.</div>
+              <table *ngIf="dept.users.length > 0" class="modern-table nested">
+                <thead>
+                  <tr>
+                    <th>Staff Name</th>
+                    <th>Role</th>
+                    <th>Assigned Tickets</th>
+                    <th>Resolved</th>
+                    <th>Open</th>
+                    <th>Resolution %</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let u of dept.users" class="clickable-row" (click)="openUser(u.userId)">
+                    <td>
+                      <div class="customer-cell">
+                        <div class="avatar-box bg-blue small">{{ getUserInitials(u.name) }}</div>
+                        <span class="font-medium">{{ u.name }}</span>
+                      </div>
+                    </td>
+                    <td><span class="role-badge">{{ u.roleName }}</span></td>
+                    <td class="font-bold">{{ u.totalAssigned }}</td>
+                    <td class="text-green font-semibold">{{ u.resolved }}</td>
+                    <td class="text-rose font-semibold">{{ u.open }}</td>
+                    <td>
+                      <span class="rate-text" [style.color]="getRateColor(u.resolutionRate)">{{ u.resolutionRate }}%</span>
+                    </td>
+                    <td>
+                      <button class="btn-detail-link" (click)="openUser(u.userId); $event.stopPropagation()">
+                        View Profile →
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-TAB 2: TEAMS & USERS IN TEAM -->
+      <div *ngIf="locationSubTab === 'teams'" class="tab-pane">
+        <div class="accordion-list">
+          <div *ngFor="let team of locationDetail.teams" class="accordion-item">
+            <div class="accordion-header" (click)="toggleTeamAccordion(team.roleId)">
+              <div class="header-left">
+                <span class="accordion-icon">🛡️</span>
+                <div>
+                  <h4 class="accordion-title">{{ team.roleName }}</h4>
+                  <span class="accordion-sub">
+                    {{ team.totalTickets }} Tickets Handled • {{ team.resolvedTickets }} Resolved
+                  </span>
+                </div>
+              </div>
+              <div class="header-right">
+                <span class="rate-text" [style.color]="getRateColor(team.resolutionRate)">{{ team.resolutionRate }}%</span>
+                <span class="caret-icon">{{ expandedTeamId === team.roleId ? '▲' : '▼' }}</span>
+              </div>
+            </div>
+
+            <div *ngIf="expandedTeamId === team.roleId" class="accordion-body">
+              <h5 class="nested-title">Members of {{ team.roleName }} Team at this Location:</h5>
+              <table *ngIf="team.users.length > 0" class="modern-table nested">
+                <thead>
+                  <tr>
+                    <th>Staff Name</th>
+                    <th>Assigned Tickets</th>
+                    <th>Resolved</th>
+                    <th>Open</th>
+                    <th>Resolution %</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let u of team.users" class="clickable-row" (click)="openUser(u.userId)">
+                    <td>
+                      <div class="customer-cell">
+                        <div class="avatar-box bg-indigo small">{{ getUserInitials(u.name) }}</div>
+                        <span class="font-medium">{{ u.name }}</span>
+                      </div>
+                    </td>
+                    <td class="font-bold">{{ u.totalAssigned }}</td>
+                    <td class="text-green font-semibold">{{ u.resolved }}</td>
+                    <td class="text-rose font-semibold">{{ u.open }}</td>
+                    <td>
+                      <span class="rate-text" [style.color]="getRateColor(u.resolutionRate)">{{ u.resolutionRate }}%</span>
+                    </td>
+                    <td>
+                      <button class="btn-detail-link" (click)="openUser(u.userId); $event.stopPropagation()">
+                        View Profile →
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-TAB 3: ALL STATIONED STAFF -->
+      <div *ngIf="locationSubTab === 'users'" class="tab-pane">
+        <div class="table-card">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th>Staff Name</th>
+                <th>Role</th>
+                <th>Email</th>
+                <th>Mobile</th>
+                <th>Assigned Tickets</th>
+                <th>Resolved</th>
+                <th>Open</th>
+                <th>Resolution %</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let u of locationDetail.users" class="clickable-row" (click)="openUser(u.userId)">
+                <td>
+                  <div class="customer-cell">
+                    <div class="avatar-box bg-blue">{{ getUserInitials(u.name) }}</div>
+                    <div>
+                      <div class="cell-title">{{ u.name }}</div>
+                      <div class="cell-sub">&#64;{{ u.userName }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="role-badge">{{ u.roleName }}</span></td>
+                <td>{{ u.email || '—' }}</td>
+                <td>{{ u.mobileNo || '—' }}</td>
+                <td class="font-bold">{{ u.totalAssigned }}</td>
+                <td class="text-green font-semibold">{{ u.resolved }}</td>
+                <td class="text-rose font-semibold">{{ u.open }}</td>
+                <td>
+                  <span class="rate-text" [style.color]="getRateColor(u.resolutionRate)">{{ u.resolutionRate }}%</span>
+                </td>
+                <td>
+                  <button class="btn-detail-link" (click)="openUser(u.userId); $event.stopPropagation()">
+                    View Profile →
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SUB-TAB 4: ASSOCIATED CUSTOMERS -->
+      <div *ngIf="locationSubTab === 'customers'" class="tab-pane">
+        <div class="table-card">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th>Customer Name</th>
+                <th>Customer Code</th>
+                <th>Total Tickets</th>
+                <th>Resolved</th>
+                <th>Unresolved</th>
+                <th>Resolution %</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of locationDetail.customers" class="clickable-row" (click)="openCustomer(c.customerId)">
+                <td>
+                  <div class="customer-cell">
+                    <div class="avatar-box bg-purple">{{ getUserInitials(c.customerName) }}</div>
+                    <span class="cell-title">{{ c.customerName }}</span>
+                  </div>
+                </td>
+                <td><span class="code-pill">{{ c.customerCode || '—' }}</span></td>
+                <td class="font-bold">{{ c.totalTickets }}</td>
+                <td class="text-green font-semibold">{{ c.resolvedTickets }}</td>
+                <td class="text-rose font-semibold">{{ c.unresolvedTickets }}</td>
+                <td>
+                  <span class="rate-text" [style.color]="getRateColor(c.resolutionRate)">{{ c.resolutionRate }}%</span>
+                </td>
+                <td>
+                  <button class="btn-detail-link" (click)="openCustomer(c.customerId); $event.stopPropagation()">
+                    Customer 360° →
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SUB-TAB 5: TICKETS AT THIS LOCATION -->
+      <div *ngIf="locationSubTab === 'tickets'" class="tab-pane">
+        <div class="table-card">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th>Ticket #</th>
+                <th>Subject</th>
+                <th>Customer</th>
+                <th>Assignee</th>
+                <th>Module</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of locationDetail.recentTickets">
+                <td class="font-mono font-semibold">{{ t.ticketNumber }}</td>
+                <td class="subject-cell">{{ t.subject }}</td>
+                <td>{{ t.customerName }}</td>
+                <td>{{ t.assigneeName }}</td>
+                <td><span class="code-pill">{{ t.moduleName }}</span></td>
+                <td><span class="badge" [ngClass]="getPriorityBadgeClass(t.priority)">{{ t.priority }}</span></td>
+                <td><span class="badge" [ngClass]="getStatusBadgeClass(t.status)">{{ t.status }}</span></td>
+                <td>{{ t.createdOn | date:'mediumDate' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </ng-container>
+  </main>
+
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <!-- 3. CUSTOMER DRILL-DOWN VIEW (CUSTOMER ISSUES 360) -->
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <main *ngIf="activeView === 'customer'" class="drilldown-view">
+    <div *ngIf="isLoadingDetail" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading customer profile and ticket issues summary...</p>
+    </div>
+
+    <ng-container *ngIf="!isLoadingDetail && customerDetail">
+      <!-- Customer Banner -->
+      <section class="banner-card">
+        <div class="banner-top">
+          <button class="btn-back" (click)="backToOverview()">
+            ← Back to Overview
+          </button>
+          <span class="banner-tag">👥 Customer Account 360°</span>
+        </div>
+
+        <div class="banner-main">
+          <div class="banner-info">
+            <div class="banner-code-pill">{{ customerDetail.customer.customerCode || 'TMS-CLIENT' }}</div>
+            <h2 class="banner-title">{{ customerDetail.customer.customerName }}</h2>
+            <p class="banner-meta">
+              <span>✉ {{ customerDetail.customer.email || 'No email registered' }}</span>
+              <span *ngIf="customerDetail.customer.mobileNo"> • 📞 {{ customerDetail.customer.mobileNo }}</span>
+            </p>
+          </div>
+
+          <div class="banner-kpis">
+            <div class="banner-stat">
+              <span class="b-lbl">Total Issues</span>
+              <span class="b-val">{{ customerDetail.kpi.totalTickets }}</span>
+            </div>
+            <div class="banner-stat text-green">
+              <span class="b-lbl">Resolved</span>
+              <span class="b-val">{{ customerDetail.kpi.resolvedTickets }}</span>
+            </div>
+            <div class="banner-stat text-rose">
+              <span class="b-lbl">Unresolved</span>
+              <span class="b-val">{{ customerDetail.kpi.unresolvedTickets }}</span>
+            </div>
+            <div class="banner-stat">
+              <span class="b-lbl">Resolution Rate</span>
+              <span class="b-val" [style.color]="getRateColor(customerDetail.kpi.resolutionRate)">
+                {{ customerDetail.kpi.resolutionRate }}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Customer Department Composition Chart -->
+      <section class="charts-section-grid single-chart">
+        <div class="chart-panel">
+          <div class="chart-panel-header">
+            <div>
+              <span class="chart-category">Department Breakdown</span>
+              <h3 class="chart-title">Issues Composition by Module for {{ customerDetail.customer.customerName }}</h3>
+            </div>
+          </div>
+          <div class="canvas-container height-260">
+            <canvas id="cust-dept-chart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- CUSTOMER ISSUES SUMMARY SECTION -->
+      <section class="section-block">
+        <h3 class="section-title">🔍 Customer Issues Summary & Breakdown</h3>
+        <p class="section-sub">Departments raised against, teams responsible, individual assignees, and handling locations.</p>
+
+        <div class="breakdown-grid">
+          <!-- 1. By Department / Module -->
+          <div class="breakdown-card">
+            <h4 class="b-card-title">🏢 Raised Against Departments</h4>
+            <div class="b-list">
+              <div *ngFor="let d of customerDetail.departmentBreakdown" class="b-item">
+                <div class="b-item-header">
+                  <span class="b-name">{{ d.moduleName }}</span>
+                  <span class="b-count font-bold">{{ d.totalTickets }} issues</span>
+                </div>
+                <div class="progress-track small">
+                  <div
+                    class="progress-bar"
+                    [style.width.%]="customerDetail.kpi.totalTickets > 0 ? (d.totalTickets / customerDetail.kpi.totalTickets * 100) : 0"
+                    style="background-color: #3b82f6;"
+                  ></div>
+                </div>
+                <div class="b-item-meta">
+                  <span class="text-green">{{ d.resolvedTickets }} resolved</span>
+                  <span class="text-rose">{{ d.unresolvedTickets }} open</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. By Team / Role -->
+          <div class="breakdown-card">
+            <h4 class="b-card-title">🛡️ Handled by Teams / Roles</h4>
+            <div class="b-list">
+              <div *ngFor="let tm of customerDetail.teamBreakdown" class="b-item">
+                <div class="b-item-header">
+                  <span class="b-name">{{ tm.roleName }}</span>
+                  <span class="b-count font-bold">{{ tm.totalTickets }} issues</span>
+                </div>
+                <div class="progress-track small">
+                  <div
+                    class="progress-bar"
+                    [style.width.%]="customerDetail.kpi.totalTickets > 0 ? (tm.totalTickets / customerDetail.kpi.totalTickets * 100) : 0"
+                    style="background-color: #8b5cf6;"
+                  ></div>
+                </div>
+                <div class="b-item-meta">
+                  <span class="text-green">{{ tm.resolvedTickets }} resolved</span>
+                  <span class="text-rose">{{ tm.unresolvedTickets }} open</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. By Assignee User -->
+          <div class="breakdown-card">
+            <h4 class="b-card-title">👤 Handled by Staff Assignees</h4>
+            <div class="b-list">
+              <div *ngFor="let u of customerDetail.userBreakdown" class="b-item clickable" (click)="openUser(u.userId)">
+                <div class="b-item-header">
+                  <span class="b-name font-medium">{{ u.userName }} ({{ u.roleName }})</span>
+                  <span class="b-count font-bold">{{ u.totalTickets }} issues</span>
+                </div>
+                <div class="b-item-meta">
+                  <span>📍 {{ u.locationName }}</span>
+                  <span class="text-green">{{ u.resolvedTickets }} resolved</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. By Location -->
+          <div class="breakdown-card">
+            <h4 class="b-card-title">📍 Handled by Locations</h4>
+            <div class="b-list">
+              <div *ngFor="let l of customerDetail.locationBreakdown" class="b-item clickable" (click)="openLocation(l.locationId)">
+                <div class="b-item-header">
+                  <span class="b-name font-medium">{{ l.locationName }}</span>
+                  <span class="b-count font-bold">{{ l.totalTickets }} issues</span>
+                </div>
+                <div class="b-item-meta">
+                  <span class="code-pill">{{ l.locationCode }}</span>
+                  <span class="text-green">{{ l.resolvedTickets }} resolved</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Customer Tickets Table -->
+      <section class="section-block">
+        <h3 class="section-title">🎫 All Tickets for {{ customerDetail.customer.customerName }}</h3>
+        <div class="table-card">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th>Ticket #</th>
+                <th>Subject</th>
+                <th>Department</th>
+                <th>Assignee</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Closed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of customerDetail.tickets">
+                <td class="font-mono font-semibold">{{ t.ticketNumber }}</td>
+                <td class="subject-cell">{{ t.subject }}</td>
+                <td><span class="code-pill">{{ t.moduleName }}</span></td>
+                <td>{{ t.assigneeName }}</td>
+                <td><span class="badge" [ngClass]="getPriorityBadgeClass(t.priority)">{{ t.priority }}</span></td>
+                <td><span class="badge" [ngClass]="getStatusBadgeClass(t.status)">{{ t.status }}</span></td>
+                <td>{{ t.createdOn | date:'mediumDate' }}</td>
+                <td>{{ t.closedOn ? (t.closedOn | date:'mediumDate') : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+  </main>
+
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <!-- 4. USER DRILL-DOWN VIEW (STAFF PROFILE & METRICS) -->
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <main *ngIf="activeView === 'user'" class="drilldown-view">
+    <div *ngIf="isLoadingDetail" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading staff performance details...</p>
+    </div>
+
+    <ng-container *ngIf="!isLoadingDetail && userDetail">
+      <!-- User Banner -->
+      <section class="banner-card">
+        <div class="banner-top">
+          <button class="btn-back" (click)="backToOverview()">
+            ← Back to Overview
+          </button>
+          <span class="banner-tag">👤 Staff Performance Profile</span>
+        </div>
+
+        <div class="banner-main">
+          <div class="user-avatar-hero">
+            {{ getUserInitials(userDetail.user.name || userDetail.user.userName) }}
+          </div>
+
+          <div class="banner-info">
+            <h2 class="banner-title">{{ userDetail.user.name || userDetail.user.userName }}</h2>
+            <div class="badge-row">
+              <span class="role-badge large">{{ userDetail.user.roleName }}</span>
+              <span class="loc-tag" (click)="openLocation(userDetail.user.locationId)">
+                📍 {{ userDetail.user.locationName }} ({{ userDetail.user.locationCode }})
+              </span>
+              <span class="status-indicator" [class.active]="userDetail.user.isActive">
+                {{ userDetail.user.isActive ? '● Active' : '○ Inactive' }}
+              </span>
+            </div>
+            <p class="banner-meta">
+              <span>✉ {{ userDetail.user.email || 'No email on record' }}</span>
+              <span *ngIf="userDetail.user.mobileNo"> • 📞 {{ userDetail.user.mobileNo }}</span>
+            </p>
+          </div>
+
+          <div class="banner-kpis">
+            <div class="banner-stat">
+              <span class="b-lbl">Assigned</span>
+              <span class="b-val">{{ userDetail.kpi.totalTickets }}</span>
+            </div>
+            <div class="banner-stat text-green">
+              <span class="b-lbl">Resolved</span>
+              <span class="b-val">{{ userDetail.kpi.resolvedTickets }}</span>
+            </div>
+            <div class="banner-stat text-rose">
+              <span class="b-lbl">Unresolved</span>
+              <span class="b-val">{{ userDetail.kpi.unresolvedTickets }}</span>
+            </div>
+            <div class="banner-stat">
+              <span class="b-lbl">Resolution %</span>
+              <span class="b-val" [style.color]="getRateColor(userDetail.kpi.resolutionRate)">
+                {{ userDetail.kpi.resolutionRate }}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- User Monthly Trend Chart -->
+      <section class="charts-section-grid single-chart">
+        <div class="chart-panel">
+          <div class="chart-panel-header">
+            <div>
+              <span class="chart-category">Resolution Velocity</span>
+              <h3 class="chart-title">Monthly Ticket Resolution Velocity & Trend</h3>
+            </div>
+          </div>
+          <div class="canvas-container height-260">
+            <canvas id="user-trend-chart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- User Analytics Duos -->
+      <div class="cards-duo-grid">
+        <!-- Department Distribution -->
+        <div class="detail-panel">
+          <h4 class="panel-title">🏢 Departments Handled</h4>
+          <div *ngFor="let d of userDetail.departmentBreakdown" class="b-item">
+            <div class="b-item-header">
+              <span class="b-name font-medium">{{ d.moduleName }}</span>
+              <span class="b-count font-bold">{{ d.totalTickets }} tickets</span>
+            </div>
+            <div class="progress-track small">
+              <div
+                class="progress-bar"
+                [style.width.%]="d.resolutionRate"
+                [style.backgroundColor]="getRateColor(d.resolutionRate)"
+              ></div>
+            </div>
+            <div class="b-item-meta">
+              <span class="text-green">{{ d.resolvedTickets }} resolved</span>
+              <span class="text-rose">{{ d.unresolvedTickets }} open</span>
+              <span>Rate: {{ d.resolutionRate }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer Distribution -->
+        <div class="detail-panel">
+          <h4 class="panel-title">👥 Top Customers Handled</h4>
+          <div *ngFor="let c of userDetail.customerBreakdown" class="b-item clickable" (click)="openCustomer(c.customerId)">
+            <div class="b-item-header">
+              <span class="b-name font-medium">{{ c.customerName }}</span>
+              <span class="b-count font-bold">{{ c.totalTickets }} tickets</span>
+            </div>
+            <div class="b-item-meta">
+              <span class="code-pill">{{ c.customerCode }}</span>
+              <span class="text-green">{{ c.resolvedTickets }} resolved</span>
+              <span>Rate: {{ c.resolutionRate }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Tickets Table -->
+      <section class="section-block">
+        <h3 class="section-title">🎫 Assigned Tickets for {{ userDetail.user.name || userDetail.user.userName }}</h3>
+        <div class="table-card">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th>Ticket #</th>
+                <th>Subject</th>
+                <th>Customer</th>
+                <th>Department</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Closed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of userDetail.tickets">
+                <td class="font-mono font-semibold">{{ t.ticketNumber }}</td>
+                <td class="subject-cell">{{ t.subject }}</td>
+                <td>{{ t.customerName }}</td>
+                <td><span class="code-pill">{{ t.moduleName }}</span></td>
+                <td><span class="badge" [ngClass]="getPriorityBadgeClass(t.priority)">{{ t.priority }}</span></td>
+                <td><span class="badge" [ngClass]="getStatusBadgeClass(t.status)">{{ t.status }}</span></td>
+                <td>{{ t.createdOn | date:'mediumDate' }}</td>
+                <td>{{ t.closedOn ? (t.closedOn | date:'mediumDate') : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+  </main>
+
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 5: TEAM DRILL-DOWN VIEW (HIERARCHY & MEMBER STATS)      -->
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <main *ngIf="activeView === 'team'" class="drilldown-view">
+    <div *ngIf="isLoadingDetail" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading team hierarchy & performance details...</p>
+    </div>
+
+    <ng-container *ngIf="!isLoadingDetail && teamDetail">
+      <!-- Team Hero Banner -->
+      <section class="banner-card team-banner">
+        <div class="banner-top">
+          <button class="btn-back" (click)="backToOverview()">
+            ← Back to Enterprise Overview
+          </button>
+          <div class="banner-badge-group">
+            <span class="banner-tag">🛡️ Team Hierarchy</span>
+            <span class="banner-tag">👥 {{ teamDetail.members.length }} Team Members</span>
+          </div>
+        </div>
+
+        <div class="banner-main">
+          <div class="user-avatar-hero team-avatar-lead">
+            {{ getUserInitials(teamDetail.manager ? (teamDetail.manager.name || teamDetail.manager.userName) : teamDetail.team.roleName) }}
+          </div>
+          <div class="banner-info">
+            <div class="banner-code-pill">TEAM LEAD / MANAGER</div>
+            <h2 class="banner-title">{{ teamDetail.team.managerName || teamDetail.team.roleName }}</h2>
+            <div class="badge-row">
+              <span class="role-badge large">{{ teamDetail.team.managerRole || 'Lead' }}</span>
+              <span class="loc-tag" *ngIf="teamDetail.manager?.locationId" (click)="openLocation(teamDetail.manager.locationId)">
+                📍 {{ teamDetail.manager.locationName }} ({{ teamDetail.manager.locationCode }})
+              </span>
+              <span class="contact-pill" *ngIf="teamDetail.manager?.email">✉ {{ teamDetail.manager.email }}</span>
+              <span class="contact-pill" *ngIf="teamDetail.manager?.mobileNo">📞 {{ teamDetail.manager.mobileNo }}</span>
+            </div>
+            <p class="banner-meta">
+              Hierarchical reporting line based on TMS Master User structure. Direct reports route tickets through this operational team.
+            </p>
+          </div>
+
+          <!-- Team KPI Stat Boxes (build-dashboard skill) -->
+          <div class="banner-kpis team-kpis">
+            <div class="banner-stat">
+              <span class="b-lbl">Team Tickets</span>
+              <span class="b-val">{{ teamDetail.kpi.totalTickets }}</span>
+            </div>
+            <div class="banner-stat text-green">
+              <span class="b-lbl">Solved / Resolved</span>
+              <span class="b-val">{{ teamDetail.kpi.resolvedTickets }}</span>
+            </div>
+            <div class="banner-stat text-rose">
+              <span class="b-lbl">Unresolved</span>
+              <span class="b-val">{{ teamDetail.kpi.unresolvedTickets }}</span>
+            </div>
+            <div class="banner-stat text-amber">
+              <span class="b-lbl">In-Progress</span>
+              <span class="b-val">{{ teamDetail.kpi.inProgressTickets }}</span>
+            </div>
+            <div class="banner-stat">
+              <span class="b-lbl">Resolution Rate</span>
+              <span class="b-val" [style.color]="getRateColor(teamDetail.kpi.resolutionRate)">
+                {{ teamDetail.kpi.resolutionRate }}%
+              </span>
+            </div>
+            <div class="banner-stat">
+              <span class="b-lbl">Avg Resolution</span>
+              <span class="b-val">{{ teamDetail.kpi.avgResolutionHours }} <span class="unit">h</span></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Visual Charts Grid (build-dashboard skill) -->
+      <section class="charts-section-grid">
+        <!-- Chart 1: Member-Level Ticket Resolution (Who solved how many tickets) -->
+        <div class="chart-panel primary-chart">
+          <div class="chart-panel-header">
+            <div>
+              <span class="chart-category">Member Productivity</span>
+              <h3 class="chart-title">Who Solved How Many Tickets (Resolved vs Unresolved)</h3>
+            </div>
+            <span class="chart-badge">By Team Member</span>
+          </div>
+          <div class="canvas-container">
+            <canvas id="team-member-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Module Distribution for this Team -->
+        <div class="chart-panel secondary-chart">
+          <div class="chart-panel-header">
+            <div>
+              <span class="chart-category">Workload Distribution</span>
+              <h3 class="chart-title">Team Tickets by Module / Dept</h3>
+            </div>
+          </div>
+          <div class="canvas-container">
+            <canvas id="team-dept-chart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Team Hierarchy & Member Performance Table -->
+      <section class="section-block">
+        <div class="section-header-row">
+          <div>
+            <h3 class="section-title">🛡️ Team Hierarchy & Member Ticket Resolution Breakdown</h3>
+            <p class="section-subtitle">
+              Detailed breakdown of users in this team, their reporting hierarchy, and who solved how many tickets.
+            </p>
+          </div>
+          <span class="badge-count">{{ teamDetail.members.length }} Team Members</span>
+        </div>
+
+        <div class="table-card">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th>Member & Hierarchy</th>
+                <th>Designation / Role</th>
+                <th>Base Location</th>
+                <th class="text-center">Total Assigned</th>
+                <th class="text-center">Solved / Resolved</th>
+                <th class="text-center">Unresolved</th>
+                <th>Resolution Rate</th>
+                <th class="text-center">Avg Resolution</th>
+                <th class="text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let m of teamDetail.members" [class.highlight-manager-row]="m.isManager">
+                <td>
+                  <div class="customer-cell">
+                    <div class="avatar-box" [ngClass]="m.isManager ? 'bg-amber' : 'bg-blue'">
+                      {{ getUserInitials(m.name || m.userName) }}
+                    </div>
+                    <div>
+                      <div class="cell-title font-semibold flex-center">
+                        {{ m.name || m.userName }}
+                        <span class="manager-pill" *ngIf="m.isManager">👑 Manager / Lead</span>
+                        <span class="subordinate-pill" *ngIf="!m.isManager">↳ Direct Report</span>
+                      </div>
+                      <div class="cell-sub">
+                        <span>#{{ m.userId }}</span>
+                        <span *ngIf="m.email"> • ✉ {{ m.email }}</span>
+                        <span *ngIf="m.mobileNo"> • 📞 {{ m.mobileNo }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="role-badge" [class.role-lead]="m.isManager">{{ m.roleName }}</span>
+                </td>
+                <td>
+                  <span class="loc-tag" *ngIf="m.locationId" (click)="openLocation(m.locationId)">
+                    📍 {{ m.locationName }} ({{ m.locationCode }})
+                  </span>
+                  <span class="cell-sub" *ngIf="!m.locationId">—</span>
+                </td>
+                <td class="font-bold text-center text-base">{{ m.totalAssigned }}</td>
+                <td class="text-center">
+                  <span class="badge-success-count">
+                    ✓ {{ m.resolved }} solved
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge-unresolved-count" [class.has-open]="m.unresolved > 0">
+                    ⚠ {{ m.unresolved }} open
+                  </span>
+                </td>
+                <td>
+                  <div class="inline-progress">
+                    <div class="progress-track small">
+                      <div
+                        class="progress-bar"
+                        [style.width.%]="m.resolutionRate"
+                        [style.backgroundColor]="getRateColor(m.resolutionRate)"
+                      ></div>
+                    </div>
+                    <span class="rate-text" [style.color]="getRateColor(m.resolutionRate)">
+                      {{ m.resolutionRate }}%
+                    </span>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <span class="font-mono font-semibold">{{ m.avgResolutionHours }} hrs</span>
+                </td>
+                <td class="text-center">
+                  <button class="btn-detail-link" (click)="openUser(m.userId)">
+                    Profile →
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Department & Customer Duos for Team -->
+      <div class="cards-duo-grid">
+        <!-- Team Departments -->
+        <div class="detail-panel">
+          <h4 class="panel-title">🏢 Departments & Modules Serviced by this Team</h4>
+          <div *ngIf="teamDetail.departmentBreakdown?.length === 0" class="empty-hint">
+            No department data available for this team.
+          </div>
+          <div *ngFor="let d of teamDetail.departmentBreakdown" class="b-item">
+            <div class="b-item-header">
+              <span class="b-name font-medium">{{ d.moduleName }}</span>
+              <span class="b-count font-bold">{{ d.totalTickets }} tickets</span>
+            </div>
+            <div class="progress-track small">
+              <div
+                class="progress-bar"
+                [style.width.%]="d.resolutionRate"
+                [style.backgroundColor]="getRateColor(d.resolutionRate)"
+              ></div>
+            </div>
+            <div class="b-item-meta">
+              <span class="text-green">{{ d.resolvedTickets }} solved</span>
+              <span class="text-rose">{{ d.unresolvedTickets }} unresolved</span>
+              <span>Rate: {{ d.resolutionRate }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team Customers -->
+        <div class="detail-panel">
+          <h4 class="panel-title">👥 Key Customers Handled by this Team</h4>
+          <div *ngIf="teamDetail.customerBreakdown?.length === 0" class="empty-hint">
+            No customer assignments recorded for this team.
+          </div>
+          <div *ngFor="let c of teamDetail.customerBreakdown" class="b-item clickable" (click)="openCustomer(c.customerId)">
+            <div class="b-item-header">
+              <span class="b-name font-medium">{{ c.customerName }}</span>
+              <span class="b-count font-bold">{{ c.totalTickets }} tickets</span>
+            </div>
+            <div class="b-item-meta">
+              <span class="code-pill">{{ c.customerCode }}</span>
+              <span class="text-green">{{ c.resolvedTickets }} solved</span>
+              <span class="text-rose">{{ c.unresolvedTickets }} open</span>
+              <span>Rate: {{ c.resolutionRate }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Team Recent Tickets Table -->
+      <section class="section-block">
+        <div class="section-header-row">
+          <div>
+            <h3 class="section-title">🎫 All Tickets Handled by {{ teamDetail.team.managerName || teamDetail.team.roleName }} Team</h3>
+            <p class="section-subtitle">
+              Comprehensive ticket audit log including assignee, customer, and real-time status.
+            </p>
+          </div>
+          <span class="badge-count">{{ teamDetail.tickets.length }} Tickets</span>
+        </div>
+
+        <div class="table-card">
+          <div *ngIf="teamDetail.tickets.length === 0" class="empty-hint p-4">
+            No tickets currently mapped to this team.
+          </div>
+          <table class="modern-table" *ngIf="teamDetail.tickets.length > 0">
+            <thead>
+              <tr>
+                <th>Ticket #</th>
+                <th>Subject</th>
+                <th>Assignee</th>
+                <th>Customer</th>
+                <th>Department</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Created Date</th>
+                <th>Closed Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of teamDetail.tickets">
+                <td class="font-mono font-semibold">{{ t.ticketNumber }}</td>
+                <td class="subject-cell">{{ t.subject }}</td>
+                <td>
+                  <span class="assignee-tag" *ngIf="t.assigneeName">👤 {{ t.assigneeName }}</span>
+                  <span class="cell-sub" *ngIf="!t.assigneeName">Unassigned</span>
+                </td>
+                <td>{{ t.customerName }}</td>
+                <td><span class="code-pill">{{ t.moduleName }}</span></td>
+                <td><span class="badge" [ngClass]="getPriorityBadgeClass(t.priority)">{{ t.priority }}</span></td>
+                <td><span class="badge" [ngClass]="getStatusBadgeClass(t.status)">{{ t.status }}</span></td>
+                <td>{{ t.createdOn | date:'mediumDate' }}</td>
+                <td>{{ t.closedOn ? (t.closedOn | date:'mediumDate') : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+  </main>
+</div>

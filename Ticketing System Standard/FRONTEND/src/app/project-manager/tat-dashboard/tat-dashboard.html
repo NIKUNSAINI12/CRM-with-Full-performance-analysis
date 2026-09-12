@@ -1,0 +1,154 @@
+<div class="space-y-6">
+  
+  <!-- Dashboard Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-brand-text-100 tracking-tight">TAT Dashboard</h1>
+      <p class="text-xs text-brand-text-400 font-mono mt-1">Track SLA Compliance and Turn Around Time</p>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <button (click)="clearFilters()" [disabled]="isLoading" 
+              class="px-3 py-1.5 bg-brand-dark-900 border border-brand-dark-700 hover:bg-brand-dark-700 text-xs font-semibold rounded-md flex items-center gap-2 transition duration-150 cursor-pointer select-none">
+        Clear Filters
+      </button>
+      <button (click)="loadStats()" [disabled]="isLoading" 
+              class="px-3 py-1.5 bg-brand-primary text-white hover:bg-brand-primary/90 border border-brand-primary/50 text-xs font-semibold rounded-md flex items-center gap-2 transition duration-150 cursor-pointer select-none">
+        <span class="material-icons text-sm" [class.animate-spin]="isLoading">refresh</span>
+        Apply Filters
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="flex flex-wrap items-end gap-4 bg-brand-dark-900 p-4 rounded-xl border border-brand-dark-800">
+    <!-- Relationship -->
+    <div class="flex flex-col gap-1 min-w-[150px] flex-1" *ngIf="!isAssignee">
+      <label class="text-[10px] font-bold text-brand-text-400 uppercase tracking-widest">Relationship</label>
+      <select [(ngModel)]="filterRelationship" (change)="loadStats()" class="w-full bg-brand-dark-800 border border-brand-dark-700 rounded-md px-3 py-2 text-sm text-brand-text-200 focus:outline-none focus:border-brand-primary/50">
+        <option value="">All Tickets</option>
+        <option value="AssignedToMe">Assigned to Me</option>
+        <option value="CreatedByMe">Created by Me</option>
+        <option value="AssignedToJuniors">Assigned to My Juniors</option>
+      </select>
+    </div>
+    <!-- Status -->
+    <div class="flex flex-col gap-1 min-w-[150px] flex-1">
+      <label class="text-[10px] font-bold text-brand-text-400 uppercase tracking-widest">Status</label>
+      <select [(ngModel)]="filterStatus" (change)="loadStats()" class="w-full bg-brand-dark-800 border border-brand-dark-700 rounded-md px-3 py-2 text-sm text-brand-text-200 focus:outline-none focus:border-brand-primary/50">
+        <option value="">All Statuses</option>
+        <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+      </select>
+    </div>
+    <!-- From Date -->
+    <div class="flex flex-col gap-1 min-w-[150px] flex-1">
+      <label class="text-[10px] font-bold text-brand-text-400 uppercase tracking-widest">From Date</label>
+      <input type="date" [(ngModel)]="filterFromDate" (change)="loadStats()" class="w-full bg-brand-dark-800 border border-brand-dark-700 rounded-md px-3 py-2 text-sm text-brand-text-200 focus:outline-none focus:border-brand-primary/50 [color-scheme:dark]">
+    </div>
+    <!-- To Date -->
+    <div class="flex flex-col gap-1 min-w-[150px] flex-1">
+      <label class="text-[10px] font-bold text-brand-text-400 uppercase tracking-widest">To Date</label>
+      <input type="date" [(ngModel)]="filterToDate" (change)="loadStats()" class="w-full bg-brand-dark-800 border border-brand-dark-700 rounded-md px-3 py-2 text-sm text-brand-text-200 focus:outline-none focus:border-brand-primary/50 [color-scheme:dark]">
+    </div>
+  </div>
+
+  <!-- LOADING INDICATOR -->
+  <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-20 gap-3">
+    <div class="w-8 h-8 rounded-full border-2 border-brand-primary/20 border-t-brand-primary animate-spin"></div>
+    <span class="text-xs text-brand-text-400 font-mono">Calculating SLA Statuses...</span>
+  </div>
+
+  <div *ngIf="errorMessage" class="p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="!isLoading && stats">
+    <!-- Top Row Cards -->
+    <section class="grid grid-cols-4 gap-4">
+      <!-- Total Active Tickets -->
+      <div class="p-4 rounded-xl border border-brand-dark-800 relative overflow-hidden group bg-brand-dark-900 transition duration-150 hover:bg-brand-dark-800/50">
+        <div class="absolute -right-3 -bottom-3 text-5xl opacity-[0.03] group-hover:scale-110 transition duration-300">📊</div>
+        <div class="text-2xl font-bold text-brand-text-100">{{ stats.totalActiveTickets }}</div>
+        <div class="text-xs text-brand-text-400 font-medium font-mono mt-1">Total Active Tickets</div>
+      </div>
+      
+      <!-- Open Tickets -->
+      <div class="p-4 rounded-xl border border-brand-dark-800 relative overflow-hidden group bg-brand-dark-900 transition duration-150 hover:bg-brand-dark-800/50">
+        <div class="absolute -right-3 -bottom-3 text-5xl opacity-[0.03] group-hover:scale-110 transition duration-300">📬</div>
+        <div class="text-2xl font-bold text-brand-text-100">{{ stats.openTickets }}</div>
+        <div class="text-xs text-brand-text-400 font-medium font-mono mt-1">Open Tickets</div>
+      </div>
+      
+      <!-- In Progress -->
+      <div class="p-4 rounded-xl border border-brand-dark-800 relative overflow-hidden group bg-brand-dark-900 transition duration-150 hover:bg-brand-dark-800/50">
+        <div class="absolute -right-3 -bottom-3 text-5xl opacity-[0.03] group-hover:scale-110 transition duration-300">⏳</div>
+        <div class="text-2xl font-bold text-brand-text-100">{{ stats.inProgressTickets }}</div>
+        <div class="text-xs text-brand-text-400 font-medium font-mono mt-1">In Progress</div>
+      </div>
+
+      <!-- SLA Compliance -->
+      <div class="p-4 rounded-xl border border-brand-dark-800 relative overflow-hidden group bg-brand-dark-900 transition duration-150 hover:bg-brand-dark-800/50">
+        <div class="absolute -right-3 -bottom-3 text-5xl opacity-[0.03] group-hover:scale-110 transition duration-300">🎯</div>
+        <div class="text-2xl font-bold text-emerald-400">{{ stats.slaCompliancePercent }}%</div>
+        <div class="text-xs text-emerald-400/80 font-medium font-mono mt-1">SLA Compliance</div>
+      </div>
+    </section>
+
+    <!-- Recent Tickets Table -->
+    <div class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl overflow-hidden shadow-sm mt-6">
+      <div class="px-5 py-4 border-b border-brand-dark-800 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-brand-text-100 uppercase tracking-widest">Recent Tickets</h3>
+      </div>
+      
+      <!-- Table Grid Header -->
+      <div class="grid grid-cols-12 gap-3 px-5 py-3 border-b border-brand-dark-800 text-[10px] font-bold text-brand-text-400 font-mono uppercase tracking-widest select-none">
+        <div class="col-span-1">ID</div>
+        <div class="col-span-2">Customer</div>
+        <div class="col-span-5">Subject</div>
+        <div class="col-span-1">Priority</div>
+        <div class="col-span-1">Status</div>
+        <div class="col-span-1">Assigned To</div>
+        <div class="col-span-1 text-center">SLA</div>
+      </div>
+
+      <!-- Table Grid Body -->
+      <div class="divide-y divide-brand-dark-800">
+        <div *ngFor="let ticket of stats.recentTickets" 
+             class="grid grid-cols-12 gap-3 px-5 py-3.5 hover:bg-brand-dark-700/30 transition items-center text-xs text-brand-text-300">
+          
+          <div class="col-span-1 font-mono font-medium text-brand-primary">
+            {{ ticket.ticketId }}
+          </div>
+          <div class="col-span-2 font-semibold text-brand-text-100 truncate">
+            {{ ticket.customer }}
+          </div>
+          <div class="col-span-5 truncate text-brand-text-300 pr-4">
+            {{ ticket.subject }}
+          </div>
+          <div class="col-span-1 font-bold uppercase text-[10px]" [ngClass]="getPriorityClass(ticket.priority)">
+            {{ ticket.priority }}
+          </div>
+          <div class="col-span-1 flex">
+            <span class="px-2 py-0.5 text-[10px] font-semibold rounded-md uppercase" [ngClass]="getStatusClass(ticket.status)">
+              {{ ticket.status }}
+            </span>
+          </div>
+          <div class="col-span-1 text-brand-text-400 truncate text-[11px]">
+            {{ ticket.assignedTo }}
+          </div>
+          <div class="col-span-1 flex justify-center">
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider" [ngClass]="getSlaClass(ticket.slaStatus)">
+              {{ ticket.slaStatus }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="stats.recentTickets.length === 0" class="flex flex-col items-center justify-center py-10 text-center">
+          <span class="text-3xl opacity-20">📋</span>
+          <p class="text-sm font-semibold text-brand-text-100 mt-2">No tickets found</p>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

@@ -1,0 +1,170 @@
+.tree-root-container {
+  display: block;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+  width: 100%;
+}
+
+.org-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  width: 100%;
+}
+
+@media (min-width: 1280px) {
+  .org-grid {
+    grid-template-columns: repeat(2, 1fr); // Two PMs side-by-side
+  }
+  
+  // Center and constrain width if there's only one root node (e.g. single PM view)
+  .org-grid:has(> :only-child) {
+    grid-template-columns: 1fr;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+}
+
+.org-root-node {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-workspace);
+  border-radius: 16px;
+  padding: 32px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  transition: all 0.25s ease;
+  
+  &:hover {
+    border-color: var(--color-brand-primary);
+    background: var(--bg-surface);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  }
+}
+
+.org-node-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  position: relative;
+}
+
+.connector-down {
+  width: 2px;
+  height: 20px;
+  background-color: var(--border-workspace);
+}
+
+.org-children-wrapper {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap; // Wrap developers to multiple columns/rows
+  justify-content: center;
+  align-items: start;
+  gap: 24px;
+  position: relative;
+  width: 100%;
+  padding-top: 24px;
+  border-top: 2px solid var(--border-workspace);
+  margin-top: 0;
+}
+
+.org-child {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding-top: 16px;
+  
+  // Vertical line pointing up to the horizontal bar
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 16px;
+    background-color: var(--border-workspace);
+  }
+}
+
+.user-card {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-workspace);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+
+  /* Super/Admin role outline */
+  &.card-super {
+    border-color: rgba(63, 118, 255, 0.25);
+    &:hover {
+      background: var(--border-hover);
+      border-color: var(--color-brand-primary);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(63, 118, 255, 0.15), 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  /* PM/Manager role outline */
+  &.card-pm {
+    border-color: rgba(99, 102, 241, 0.25);
+    &:hover {
+      background: var(--border-hover);
+      border-color: var(--color-brand-secondary);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(99, 102, 241, 0.15), 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  /* Developer/child role outline */
+  &.card-developer {
+    border-color: rgba(16, 185, 129, 0.25);
+    &:hover {
+      background: var(--border-hover);
+      border-color: #10b981;
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(16, 185, 129, 0.15), 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  /* Unassigned group outline */
+  &.card-unassigned {
+    border-color: var(--border-workspace);
+    &:hover {
+      background: var(--border-hover);
+      border-color: var(--text-muted);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(156, 163, 175, 0.1), 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+/* Helper classes for theme compatibility */
+.text-high {
+  color: var(--text-high) !important;
+}
+
+.text-regular {
+  color: var(--text-regular) !important;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.bg-workspace-card {
+  background-color: var(--bg-workspace) !important;
+  border-color: var(--border-workspace) !important;
+}
+
+.placeholder-muted::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.8;
+}

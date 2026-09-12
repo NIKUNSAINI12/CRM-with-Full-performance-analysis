@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Added by HTTrack -->
+    <meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+    <meta charset="utf-8" >
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - Forza</title>
+
+    <!-- Global stylesheets -->
+    <link href="/assets/css/jquery-confirm.min.css" rel="stylesheet"/>
+<link href="/assets/css/font-awesome.css" rel="stylesheet"/>
+<link href="/assets/css/font-awesome-animation.css" rel="stylesheet"/>
+<link href="/assets/css/material-design-iconic-font.css" rel="stylesheet"/>
+<link href="/assets/css/bootstrap.css" rel="stylesheet"/>
+<link href="/assets/css/animate.css" rel="stylesheet"/>
+<link href="/assets/css/layout.css" rel="stylesheet"/>
+<link href="/assets/css/components.css" rel="stylesheet"/>
+<link href="/assets/css/widgets.css" rel="stylesheet"/>
+<link href="/assets/css/plugins.css" rel="stylesheet"/>
+<link href="/assets/css/pages.css" rel="stylesheet"/>
+<link href="/assets/css/bootstrap-extend.css" rel="stylesheet"/>
+<link href="/assets/css/common.css" rel="stylesheet"/>
+<link href="/assets/css/responsive.css" rel="stylesheet"/>
+<link href="/Content/bootstrap-datetimepicker.css" rel="stylesheet"/>
+<link href="/assets/css/prettify.css" rel="stylesheet"/>
+
+    <!-- /global stylesheets -->
+    <script src="/Scripts/jquery-1.10.2.js"></script>
+<script src="/Scripts/jquery-3.2.1.js"></script>
+<script src="/assets/js/lib/moment.js"></script>
+
+
+    <script>
+
+        
+        var docketFieldList = JSON.parse('[{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;BusinessTypeId&quot;,&quot;FieldCaption&quot;:&quot;Business Type&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:true,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ChassisNo&quot;,&quot;FieldCaption&quot;:&quot;Chassis No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;Consignee&quot;,&quot;FieldCaption&quot;:&quot;Consignee&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ConsigneeCstNo&quot;,&quot;FieldCaption&quot;:&quot;Consignee CST No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:false,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ConsigneeEmailId&quot;,&quot;FieldCaption&quot;:&quot;Consignee Email Id&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:false,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ConsigneeGstTinNo&quot;,&quot;FieldCaption&quot;:&quot;Consignee GST Tin No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:true,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:false,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ConsigneeMobileNo&quot;,&quot;FieldCaption&quot;:&quot;Consignee Mobile No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:false,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;Consignor&quot;,&quot;FieldCaption&quot;:&quot;Consignor&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ConsignorCstNo&quot;,&quot;FieldCaption&quot;:&quot;Consignor CST No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:false,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ConsignorEmailId&quot;,&quot;FieldCaption&quot;:&quot;Consignor Email Id&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:false,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ConsignorGstTinNo&quot;,&quot;FieldCaption&quot;:&quot;Consignor GST Tin No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:true,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:false,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ConsignorMobileNo&quot;,&quot;FieldCaption&quot;:&quot;Consignor Mobile No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:false,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;CustomerDeliveryNo&quot;,&quot;FieldCaption&quot;:&quot;Customer Delivery No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;CustomerGatepassNo&quot;,&quot;FieldCaption&quot;:&quot;Customer Gatepass No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;CustomerReferenceDate&quot;,&quot;FieldCaption&quot;:&quot;Customer Reference Date&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;CustomerReferenceNo&quot;,&quot;FieldCaption&quot;:&quot;Order No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;DivisionId&quot;,&quot;FieldCaption&quot;:&quot;Division&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;Docket&quot;,&quot;FieldCaption&quot;:&quot;LR&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;DocketDateTime&quot;,&quot;FieldCaption&quot;:&quot;LR Date Time&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:true,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;DocketNo&quot;,&quot;FieldCaption&quot;:&quot;LR No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:true,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;EngineNo&quot;,&quot;FieldCaption&quot;:&quot;Engine No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;EntrysheetNo&quot;,&quot;FieldCaption&quot;:&quot;Entrysheet No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;FromCity&quot;,&quot;FieldCaption&quot;:&quot;From City&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:true,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:true},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;FromLocation&quot;,&quot;FieldCaption&quot;:&quot;Origin&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:true,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;GpsNo&quot;,&quot;FieldCaption&quot;:&quot;GPS No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;IndustryId&quot;,&quot;FieldCaption&quot;:&quot;Industry&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;InternalCovers&quot;,&quot;FieldCaption&quot;:&quot;Interna lCovers.&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;LoadTypeId&quot;,&quot;FieldCaption&quot;:&quot;Load Type&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;Local&quot;,&quot;FieldCaption&quot;:&quot;Local.&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:false,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;LocalServiceTaxRegisterNo&quot;,&quot;FieldCaption&quot;:&quot;Local Service Tax Register No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ModelNo&quot;,&quot;FieldCaption&quot;:&quot;Model No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ModvatCovers&quot;,&quot;FieldCaption&quot;:&quot;Modvat Covers.&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;MotherDocketNo&quot;,&quot;FieldCaption&quot;:&quot;Mother LR No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ObdNo&quot;,&quot;FieldCaption&quot;:&quot;OBD No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;PackagingTypeId&quot;,&quot;FieldCaption&quot;:&quot;Packaging Type.&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;PolicyDate&quot;,&quot;FieldCaption&quot;:&quot;Policy Date.&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;PolicyNo&quot;,&quot;FieldCaption&quot;:&quot;Policy No.&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;PrivateMark&quot;,&quot;FieldCaption&quot;:&quot;Private Mark&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ProductTypeId&quot;,&quot;FieldCaption&quot;:&quot;Content&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;Remarks&quot;,&quot;FieldCaption&quot;:&quot;Description&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;RiskType&quot;,&quot;FieldCaption&quot;:&quot;Risk Type&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:true,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:true},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ServiceTaxRegisterNo&quot;,&quot;FieldCaption&quot;:&quot;Service Tax Register No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ToCity&quot;,&quot;FieldCaption&quot;:&quot;To City&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:true,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:true},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;ToLocation&quot;,&quot;FieldCaption&quot;:&quot;Destination&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:true,&quot;IsEditable&quot;:true,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false},{&quot;ModuleId&quot;:1,&quot;ModuleName&quot;:&quot;Docket&quot;,&quot;FieldName&quot;:&quot;TPNo&quot;,&quot;FieldCaption&quot;:&quot;TP No&quot;,&quot;IsEnabled&quot;:true,&quot;IsMandatory&quot;:false,&quot;IsEditable&quot;:false,&quot;UseFieldCaptionEdit&quot;:true,&quot;UseMandatoryEdit&quot;:false}]'.replace(/&quot;/g, '"'));
+        var appUrl = '/Master/Controller/Action';
+        loginLocationId = '1';
+        loginLocationCode = 'HQTR';
+        loginUserId = '1';
+        loginUserLocationId = '1';
+        loginCompanyId = '1';
+        loginCompanyCode = 'C001';
+        loginCompanyName = 'RAIL VIKAS NIGAM LIMITED';
+        loginFinYear = '2526';
+        docketNomenclature = 'LR';
+        prsNomenclature = 'PRS';
+        loadingSheetNomenclature = 'Loading Sheet';
+        manifestNomenclature = 'Manifest';
+        thcNomenclature = 'THC';
+        drsNomenclature = 'DRS';
+        finStartDate = '01/04/2025 00:00:00';
+        finEndDate = '31/03/2026 00:00:00';
+        var reportUrl = '/Report/ViewReport';
+
+        jsDateFormat = 'DD/MM/YYYY';
+        jsTimeFormat = 'HH:mm';
+        jsDateTimeFormat = 'DD/MM/YYYY HH:mm';
+        jsDisplayDateFormat = 'DD MMM YYYY';
+        jsDisplayTimeFormat = 'HH:mm';
+        jsDisplayDateTimeFormat = 'DD MMM YYYY HH:mm';
+        systemDateTime = moment('24 Oct 2025 12:32');
+        
+        swfPath = '/assets/icon/copy_csv_xls.swf';
+
+        //$('#btnStep1').click(function () {
+        //    if (!CheckValidLoginLocation()) return false;
+        //});
+        //$('[id*="btnStep"]').click(function () {
+        //    if (!CheckValidLoginLocation()) return false;
+        //});
+        //window.onkeydown = function (event) {
+        //    //if (event.which == 192 || event.which == 222) {
+        //    //    event.preventDefault();   // turn off browser transition to the previous page 
+        //    //}
+        //    var charCode = (event.which) ? event.which : event.keyCode
+        //    if (charCode == 8 ||
+        //        charCode == 9 ||
+        //        charCode == 46 ||
+        //        charCode == 51 ||
+        //        charCode == 190 ||
+        //        charCode == 191 ||
+        //        charCode == 189 ||
+        //        charCode == 188 ||
+        //        charCode == 32 ||
+        //        (charCode >= 37 && charCode <= 40) ||
+        //        (charCode >= 48 && charCode <= 57) ||
+        //        (charCode >= 96 && charCode <= 105) ||
+        //        (charCode >= 65 && charCode <= 90)
+        //        ) {
+
+        //    }
+        //    else
+        //    {
+        //        event.preventDefault();
+        //    }
+
+        //};
+
+        //window.addEventListener('paste', (event) => {
+            
+        //    //Regex for Valid Characters i.e. Alphabets, Numbers and Space.
+        //    var iChars = "!`%^&*+=[]\\\';{}|\":~";
+
+        //    // Get pasted data via clipboard API
+        //    clipboardData = event.clipboardData || window.clipboardData;
+        //    pastedData = clipboardData.getData('Text');
+
+        //    for (var i = 0; i < pastedData.length; i++) {
+
+        //        if (iChars.indexOf(pastedData.charAt(i)) != -1) {
+
+        //            alert("Your string has special characters. \nThese are not allowed.");
+        //            event.preventDefault();
+        //            return false;
+        //        }
+        //    }
+        //});
+
+    </script>
+
+</head>
+<body class="overlay-leftbar">
+    
+    <!--Topbar Start Here-->
+    <header class="topbar clearfix">
+        <!--Top Search Bar Start Here-->
+        <div class="top-search-bar">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-6 col-md-offset-3">
+                        <div class="search-input-addon">
+                            <span class="addon-icon"><i class="zmdi zmdi-search"></i></span>
+                            <input type="text" class="form-control top-search-input" placeholder="Search">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--Top Search Bar End Here-->
+        <!--Topbar Left Branding With Logo Start-->
+        <div class="topbar-left pull-left">
+            <div class="clearfix">
+                <ul class="left-branding pull-left clickablemenu ttmenu dark-style menu-color-gradient">
+                    <li><span class="left-toggle-switch"><i class="zmdi zmdi-menu faa-pulse animated"></i></span></li>
+                    <li>
+                        <div class="">
+                            <a href="index.html" title="Admin Template"><img src="/assets/images/logo.svg" alt="logo" width="190" height="60"></a>
+                            
+                        </div>
+                    </li>
+                </ul>
+                <!--Mobile Search and Rightbar Toggle-->
+                <ul class="branding-right pull-right">
+                    <li><a href="#" class="btn-mobile-search btn-top-search"><i class="zmdi zmdi-search"></i></a></li>
+                    <li><a href="#" class="btn-mobile-bar"><i class="zmdi zmdi-apps"></i></a></li>
+                </ul>
+            </div>
+        </div>
+        <!--Topbar Left Branding With Logo End-->
+        <!--Topbar Right Start-->
+        <div class="topbar-right pull-right">
+            <div class="clearfix">
+                <!--Mobile View Leftbar Toggle-->
+                <ul class="left-bar-switch pull-left">
+                    <li><span class="left-toggle-switch"><i class="zmdi zmdi-menu faa-pulse animated"></i></span></li>
+                </ul>
+                <ul class="pull-right top-right-icons">
+                    <li><a href='/Dashboard'><i class="zmdi zmdi-home noty-icon"></i></a></li>
+                    <li><span class="noty-separator">|&nbsp;</span></li>
+                    <li><span class="noty-label">Admin</span></li>
+                    <li><span class="noty-separator">&nbsp;|&nbsp;</span></li>
+                    <li><span class="noty-label">HQTR</span></li>
+                    <li><span class="noty-separator">&nbsp;|&nbsp;</span></li>
+                    
+                    <li class="dropdown notifications-dropdown">
+                        <a href="#" class="btn-notification dropdown-toggle" data-toggle="dropdown"><span class="more-noty"></span><i class="zmdi zmdi-format-align-left"></i></a>
+                        <div class="dropdown-menu notifications-tabs" style="height: 275px!important;width: 310px!important;">
+                            <div>
+                                <ul class="nav material-tabs nav-tabs" role="tablist">
+                                    <li class="active"><a href="#message" aria-controls="message" role="tab" data-toggle="tab">Extra Login Information</a></li>
+                                </ul>
+                                <div class="tab-content">
+                                    <div role="tabpanel" id="message">
+                                        <div class="message-list-container">
+                                            <ul class="clearfix">
+                                                <li class="clearfix">
+                                                    <a href="#" class="message-thumb">
+                                                        
+                                                        <img src="/assets/icon/calendar_year.png" alt="Calendar Icon">
+                                                    </a><a href="#" class="message-intro">2025 : 2026   </a>
+                                                </li>
+                                                <li class="clearfix">
+                                                    <a href="#" class="message-thumb">
+                                                        
+                                                        <img src="/assets/icon/factory.png" alt="Company Icon">
+                                                    </a><a href="#" class="message-intro">RAIL VIKAS NIGAM LIMITED </a>
+                                                </li>
+                                                <li class="clearfix">
+                                                    <a href="#" class="message-thumb">
+                                                        <img src="/assets/icon/warehouse.png" alt="Warehouse Icon">
+                                                        
+                                                    </a><a href="#" class="message-intro">LUCKNOW </a>
+                                                </li>
+
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="dropdown apps-dropdown">
+                        <a href="#" class="btn-apps dropdown-toggle" data-toggle="dropdown"><i class="zmdi zmdi-settings"></i></a>
+                        <div class="dropdown-menu">
+                            <ul class="more-apps">
+                                
+                                <li><a href='/Master/User/ChangePassword/1'><i class="zmdi zmdi-accounts-alt"></i> Change Password</a></li>
+                                <li><a href='/Home/Logout'><i class="fa fa-power-off"></i> Logout</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+
+            </div>
+        </div>
+        <!--Topbar Right End-->
+    </header>
+    <!--Topbar End Here-->
+    <!--Leftbar Start Here-->
+    <aside class="leftbar">
+        <div class="left-aside-container">
+            <ul class="list-accordion tree-style">
+                
+            <li><a href="#"><i class="zmdi zmdi-view-dashboard"></i><span class="list-label">Master</span></a>
+                <ul>
+                                <li><a href="javascript:;"><i class="zmdi zmdi-widgets"></i>&nbsp;<span class="list-label">Company Structure</span></a>
+                                    <ul>
+                                            <li><a href='/Master/User'>User</a></li> 
+                                    </ul></li>
+                        </ul>
+</li>
+            <li><a href="#"><i class="zmdi zmdi-view-dashboard"></i><span class="list-label">Outward</span></a>
+                <ul>
+                                <li><a href='/Master/Sku/DispatchOrders'>Dispatch Orders</a></li>
+                        </ul>
+</li>
+</li>
+</li>
+</li>
+
+
+
+            </ul>
+        </div>
+    </aside>
+    <!--Leftbar End Here-->
+    <!--Page Container Start Here-->
+    <section class="main-container">
+        <div class="container">
+            <div id="dvPageHeader" class="page-header filled light">
+                <div class="row">
+                    <div class="col-xs-6">
+                        <h2 id="lblPageHeader"> </h2>
+                        <p id="lblPageSubHeader"></p>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="data-align-right">
+                            <div class="tbl-action-toolbar hide">
+                                <ul>
+                                    <li><a id="aNavigation1" class="btn add-row btn-primary" href="#"></a></li>
+                                    <li><a id="aNavigation2" class="btn add-row btn-primary" href="#"></a></li>
+                                    <li><a id="aNavigation3" class="btn add-row btn-primary" href="#"></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+
+
+<div class="error-wrap">
+    <div class="error-container">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="error-code">
+                        <div>Error Id : 87555</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="error-message">
+                        <h4>Oops! Something went wrong...</h4>
+                        <p>
+                            Sorry, an error occurred while processing your request. :(
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="error-body">
+                        <div class="error-instruction">
+                            <span class="left-border"></span>
+                            <a class="go-home" href="index.html">
+                                <i class=" icon-home"></i>
+                            </a>
+                            <span class="indicator"></span>
+                            <ol>
+                                <li>Checking the web address for typos.</li>
+                                <li>Visiting the home page (link to the Right).</li>
+                                <li>Using our site search above.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        $('#dvPageHeader').hide();
+        //SetPageLoad('Error', 'View', null, 'Goto Home', '/');
+    });
+</script>
+
+
+        </div>
+        <!--Footer Start Here -->
+        <footer class="footer-container">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-6 col-sm-6">
+                        <div class="footer-left">
+                            <span>© 2025 <a href="">Empower Logics Pvt Ltd.</a></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </footer>
+        <!--Footer End Here -->
+    </section>
+    <!--Page Container End Here-->
+    <script src="/assets/js/lib/jquery.js"></script>
+<script src="/assets/js/lib/jquery-migrate.js"></script>
+<script src="/assets/js/lib/jquery-confirm.js"></script>
+<script src="/assets/js/lib/jquery-cloneya.js"></script>
+<script src="/assets/js/lib/jquery.ui.js"></script>
+<script src="/assets/js/lib/jquery.validate.js"></script>
+<script src="/Scripts/jquery.validate.js"></script>
+<script src="/Scripts/jquery.validate.unobtrusive.js"></script>
+<script src="/assets/js/lib/bootstrap.js"></script>
+<script src="/assets/js/lib/jRespond.js"></script>
+<script src="/assets/js/lib/nav.accordion.js"></script>
+<script src="/assets/js/lib/hover.intent.js"></script>
+<script src="/assets/js/lib/hammerjs.js"></script>
+<script src="/assets/js/lib/jquery.hammer.js"></script>
+<script src="/assets/js/lib/jquery.fitvids.js"></script>
+<script src="/assets/js/lib/scrollup.js"></script>
+<script src="/assets/js/lib/smoothscroll.js"></script>
+<script src="/assets/js/lib/jquery.slimscroll.js"></script>
+<script src="/assets/js/lib/velocity.js"></script>
+<script src="/assets/js/lib/smart-resize.js"></script>
+<script src="/assets/js/lib/icheck.js"></script>
+<script src="/assets/js/lib/jquery.switch.button.js"></script>
+<script src="/assets/js/lib/footable.min.js"></script>
+<script src="/assets/js/lib/footable.sort.js"></script>
+<script src="/assets/js/lib/footable.all.js"></script>
+<script src="/assets/js/lib/jquery.dataTables.js"></script>
+<script src="/assets/js/lib/dataTables.responsive.js"></script>
+<script src="/assets/js/lib/dataTables.tableTools.js"></script>
+<script src="/assets/js/lib/dataTables.scroller.js"></script>
+<script src="/assets/js/lib/dataTables.colVis.js"></script>
+<script src="/assets/js/lib/dataTables.colReorder.js"></script>
+<script src="/assets/js/lib/dataTables.bootstrap.js"></script>
+<script src="/assets/js/lib/tables-datatables-editor.js"></script>
+<script src="/assets/js/lib/tables-datatables-extensions.js"></script>
+<script src="/assets/js/lib/tables-datatables-sources.js"></script>
+<script src="/assets/js/lib/dataTabels.buttons.print.min.js"></script>
+<script src="/assets/js/lib/dataTables.buttons.min.js"></script>
+<script src="/assets/js/lib/tableExport.js"></script>
+<script src="/assets/js/lib/jquery.base64.js"></script>
+<script src="/assets/js/lib/sprintf.js"></script>
+<script src="/assets/js/lib/jspdf.js"></script>
+<script src="/assets/js/lib/base64.js"></script>
+<script src="/assets/js/lib/jquery.maskedinput.js"></script>
+<script src="/assets/js/lib/jquery.form.js"></script>
+<script src="/assets/js/lib/additional-methods.js"></script>
+<script src="/assets/js/lib/selectize.js"></script>
+<script src="/assets/js/lib/select2.full.js"></script>
+<script src="/assets/js/lib/jquery.loadmask.js"></script>
+<script src="/assets/js/lib/j-forms.js"></script>
+<script src="/assets/js/lib/j-forms-validations.js"></script>
+<script src="/assets/js/lib/moment.js"></script>
+<script src="/Scripts/bootstrap-datetimepicker.js"></script>
+<script src="/assets/js/lib/bootstrap-datepicker.js"></script>
+<script src="/assets/js/lib/daterangepicker.js"></script>
+<script src="/assets/js/lib/bootbox.js"></script>
+<script src="/assets/js/lib/jquery.bootstrap.wizard.js"></script>
+<script src="/assets/js/lib/prettify.js"></script>
+<script src="/assets/js/apps.js"></script>
+<script src="/Scripts/jqDevLogix.js"></script>
+<script src="/Scripts/form-wizard.js"></script>
+<script src="/Scripts/extension.js"></script>
+<script src="/Scripts/common-event.js"></script>
+<script src="/Scripts/expressive.annotations.validate.js"></script>
+
+    <script src="/Scripts/bootstrap.min.js"></script>
+    
+    <div id="dvLoader" class="page_loader">
+        
+    </div>
+
+</body>
+
+</html>

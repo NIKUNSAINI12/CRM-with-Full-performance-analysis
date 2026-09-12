@@ -1,0 +1,666 @@
+<div class="p-6 max-w-7xl mx-auto space-y-6 select-none font-sans min-h-screen">
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage"
+    class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-lg flex items-center gap-3">
+    <span class="material-icons">check_circle</span>
+    <span class="text-sm font-medium">{{ successMessage }}</span>
+  </div>
+
+  <div *ngIf="errorMessage"
+    class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg flex items-center gap-3">
+    <span class="material-icons">error</span>
+    <span class="text-sm font-medium">{{ errorMessage }}</span>
+  </div>
+
+  <!-- Header Section -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h2 class="text-2xl font-bold text-brand-text-100 tracking-tight">User Hub</h2>
+      <p class="text-sm text-brand-text-400 mt-1">Manage Customers, Executives, and Project Managers centrally</p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <input type="file" #fileInput (change)="onFileSelected($event)" accept=".xlsx, .xls" class="hidden">
+
+      <button (click)="fileInput.click()" [disabled]="isUploading"
+        class="px-4 py-2 bg-brand-dark-800 border border-brand-dark-700 hover:bg-brand-dark-700 text-brand-text-100 text-sm font-semibold rounded-lg flex items-center gap-2 transition">
+        <span class="material-icons text-base" [class.animate-spin]="isUploading">{{ isUploading ? 'sync' :
+          'upload_file' }}</span>
+        {{ isUploading ? 'Uploading...' : 'Bulk Upload ' + (activeTab === 'Assignee' ? 'Executive' : activeTab) + 's' }}
+      </button>
+
+      <button (click)="openCreateModal()"
+        class="px-4 py-2 bg-brand-primary border border-brand-primary/50 hover:bg-brand-primary-hover text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition shadow-sm shadow-brand-primary/20">
+        <span class="material-icons text-base">person_add</span>
+        Add {{ activeTab === 'Assignee' ? 'Executive' : activeTab }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs & Search -->
+  <div
+    class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-brand-dark-900 border border-brand-dark-800 p-2 rounded-xl">
+
+    <div class="flex items-center gap-1 p-1 bg-brand-dark-950 rounded-lg">
+      <button (click)="setTab('Customer')" [class.bg-brand-dark-800]="activeTab === 'Customer'"
+        [class.text-brand-text-100]="activeTab === 'Customer'" [class.text-brand-text-400]="activeTab !== 'Customer'"
+        class="px-4 py-2 rounded-md text-sm font-medium transition hover:text-brand-text-200">
+        Customers
+      </button>
+      <button (click)="setTab('Assignee')" [class.bg-brand-dark-800]="activeTab === 'Assignee'"
+        [class.text-brand-text-100]="activeTab === 'Assignee'" [class.text-brand-text-400]="activeTab !== 'Assignee'"
+        class="px-4 py-2 rounded-md text-sm font-medium transition hover:text-brand-text-200">
+        Executives
+      </button>
+      <button (click)="setTab('Manager')" [class.bg-brand-dark-800]="activeTab === 'Manager'"
+        [class.text-brand-text-100]="activeTab === 'Manager'" [class.text-brand-text-400]="activeTab !== 'Manager'"
+        class="px-4 py-2 rounded-md text-sm font-medium transition hover:text-brand-text-200">
+        Managers
+      </button>
+      <button (click)="setTab('SuperManager')" [class.bg-brand-dark-800]="activeTab === 'SuperManager'"
+        [class.text-brand-text-100]="activeTab === 'SuperManager'"
+        [class.text-brand-text-400]="activeTab !== 'SuperManager'"
+        class="px-4 py-2 rounded-md text-sm font-medium transition hover:text-brand-text-200">
+        Super Managers
+      </button>
+    </div>
+
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <!-- Assignee Typeahead Filter (only for Customer tab) -->
+      <div *ngIf="activeTab === 'Customer'" class="relative" style="min-width:200px;">
+        <span
+          class="material-icons text-brand-text-400 text-sm absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none z-10">person_search</span>
+        <input type="text" [(ngModel)]="assigneeSearchInput" (input)="onAssigneeSearchInput()"
+          (focus)="showAssigneeSuggestions = true; onAssigneeSearchInput()" (blur)="onAssigneeBlur()"
+          [placeholder]="assigneeFilterId ? getSelectedAssigneeName() : 'Filter by executive...'"
+          class="w-full pl-9 pr-8 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 placeholder-brand-text-400 focus:outline-none focus:border-brand-primary transition">
+        <!-- Clear button -->
+        <button *ngIf="assigneeFilterId" (mousedown)="clearAssigneeFilter()"
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-brand-text-400 hover:text-red-400 transition cursor-pointer">
+          <span class="material-icons text-sm">close</span>
+        </button>
+        <!-- Suggestions Dropdown -->
+        <div *ngIf="showAssigneeSuggestions && filteredAssigneeSuggestions.length > 0"
+          class="absolute left-0 right-0 top-full mt-1 bg-brand-dark-900 border border-brand-dark-700 rounded-lg shadow-xl z-50 overflow-hidden">
+          <!-- "All" option -->
+          <div (mousedown)="selectAssigneeFilter(null)"
+            class="flex items-center gap-2 px-3 py-2 hover:bg-brand-dark-800 cursor-pointer transition text-xs text-brand-text-400 border-b border-brand-dark-800">
+            <span class="material-icons text-[14px]">people</span>
+            All Executives
+          </div>
+          <div *ngFor="let a of filteredAssigneeSuggestions" (mousedown)="selectAssigneeFilter(a)"
+            class="flex items-center gap-2 px-3 py-2 hover:bg-brand-primary/10 cursor-pointer transition group">
+            <div
+              class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0">
+              {{ (a.fullName || 'E')[0] }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm text-brand-text-100 group-hover:text-brand-primary transition truncate">{{ a.fullName
+                }}</div>
+              <div class="text-[10px] text-brand-text-500 font-mono">{{ a.assigneeNumber || a.email }}</div>
+            </div>
+            <span *ngIf="assigneeFilterId === a.id" class="material-icons text-brand-primary text-sm">check</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative w-full sm:w-72">
+        <span class="material-icons text-brand-text-400 text-sm absolute left-3 top-1/2 -translate-y-1/2">search</span>
+        <input type="text"
+          placeholder="Search {{ (activeTab === 'Assignee' ? 'Executive' : activeTab) | lowercase }}s..."
+          [(ngModel)]="searchTerm" (input)="filterUsers()"
+          class="w-full pl-9 pr-4 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 placeholder-brand-text-400 focus:outline-none focus:border-brand-primary transition">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading"
+    class="flex flex-col items-center justify-center py-20 gap-3 bg-brand-dark-900 border border-brand-dark-800 rounded-xl">
+    <div class="w-8 h-8 rounded-full border-2 border-brand-primary/20 border-t-brand-primary animate-spin"></div>
+    <span class="text-sm text-brand-text-400">Loading {{ activeTab }}s...</span>
+  </div>
+
+  <!-- Data Table -->
+  <div *ngIf="!isLoading" class="bg-brand-dark-900 border border-brand-dark-800 rounded-xl overflow-hidden shadow-sm">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-brand-dark-950 border-b border-brand-dark-800">
+          <th class="px-6 py-3 text-xs font-semibold text-brand-text-300 uppercase tracking-wider">Name</th>
+          <th class="px-6 py-3 text-xs font-semibold text-brand-text-300 uppercase tracking-wider">Contact Info</th>
+          <th class="px-6 py-3 text-xs font-semibold text-brand-text-300 uppercase tracking-wider">ID / Number</th>
+          <th *ngIf="activeTab === 'Customer'"
+            class="px-6 py-3 text-xs font-semibold text-brand-text-300 uppercase tracking-wider">Assigned To</th>
+          <th class="px-6 py-3 text-xs font-semibold text-brand-text-300 uppercase tracking-wider text-right">Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-brand-dark-800">
+
+        <!-- Customers -->
+        <ng-container *ngIf="activeTab === 'Customer'">
+          <tr *ngFor="let user of filteredCustomers" class="hover:bg-brand-dark-800/50 transition group">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-8 h-8 rounded-full bg-brand-primary/20 text-brand-primary flex items-center justify-center font-bold text-sm">
+                  {{ user.fullName[0] || 'C' }}
+                </div>
+                <div>
+                  <div class="text-sm font-medium text-brand-text-100">{{ user.fullName }}</div>
+                  <div class="text-xs text-brand-text-400">{{ user.contactPerson || 'No contact person' }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-sm text-brand-text-200">{{ user.email }}</div>
+              <div class="text-xs text-brand-text-400">{{ user.mobileNo || user.phoneNo || 'No phone' }}</div>
+            </td>
+            <td class="px-6 py-4">
+              <span
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-brand-dark-800 text-brand-text-300 border border-brand-dark-700 font-mono">
+                {{ user.userNumber || 'N/A' }}
+              </span>
+            </td>
+            <!-- Assigned Executive column -->
+            <td class="px-6 py-4">
+              <div *ngIf="user.defaultAssigneeName; else noAssignee" class="flex items-center gap-2">
+                <div
+                  class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0">
+                  {{ user.defaultAssigneeName[0] }}
+                </div>
+                <span class="text-sm text-brand-text-200">{{ user.defaultAssigneeName }}</span>
+              </div>
+              <ng-template #noAssignee>
+                <span class="text-xs text-brand-text-500 italic">Not assigned</span>
+              </ng-template>
+            </td>
+            <td class="px-6 py-4 text-right flex items-center justify-end gap-1">
+              <button (click)="openEditModal(user)"
+                class="text-brand-text-400 hover:text-brand-primary transition p-2 rounded-lg hover:bg-brand-dark-800"
+                title="Edit Customer">
+                <span class="material-icons text-sm">edit</span>
+              </button>
+              <button *ngIf="isSuperUser" (click)="deleteUser(user.id, user.fullName)"
+                class="text-brand-text-400 hover:text-red-500 transition p-2 rounded-lg hover:bg-brand-dark-800"
+                title="Delete Customer">
+                <span class="material-icons text-sm">delete</span>
+              </button>
+            </td>
+          </tr>
+        </ng-container>
+
+        <!-- Assignees -->
+        <ng-container *ngIf="activeTab === 'Assignee'">
+          <tr *ngFor="let user of filteredAssignees" class="hover:bg-brand-dark-800/50 transition group">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold text-sm">
+                  {{ user.fullName ? user.fullName[0] : 'A' }}
+                </div>
+                <div>
+                  <div class="text-sm font-medium text-brand-text-100">{{ user.fullName }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-sm text-brand-text-200">{{ user.email }}</div>
+              <div class="text-xs text-brand-text-400">{{ user.mobileNo || 'No phone' }}</div>
+            </td>
+            <td class="px-6 py-4">
+              <span
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-brand-dark-800 text-brand-text-300 border border-brand-dark-700 font-mono">
+                {{ $any(user).assigneeNumber || 'N/A' }}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-right flex items-center justify-end gap-1">
+              <button (click)="openPreferencesModal(user, 'Assignee')"
+                class="text-brand-text-400 hover:text-amber-500 transition p-2 rounded-lg hover:bg-brand-dark-800"
+                title="Sidebar & Views Configuration">
+                <span class="material-icons text-sm">manage_accounts</span>
+              </button>
+              <button (click)="openEditModal(user)"
+                class="text-brand-text-400 hover:text-amber-500 transition p-2 rounded-lg hover:bg-brand-dark-800"
+                title="Edit Executive">
+                <span class="material-icons text-sm">edit</span>
+              </button>
+              <button *ngIf="isSuperUser" (click)="deleteUser(user.id, user.fullName)"
+                class="text-brand-text-400 hover:text-red-500 transition p-2 rounded-lg hover:bg-brand-dark-800"
+                title="Delete Executive">
+                <span class="material-icons text-sm">delete</span>
+              </button>
+            </td>
+          </tr>
+        </ng-container>
+
+        <!-- Managers -->
+        <ng-container *ngIf="activeTab === 'Manager'">
+          <tr *ngFor="let user of filteredManagers" class="hover:bg-brand-dark-800/50 transition group">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-sm">
+                  {{ user.fullName[0] || 'M' }}
+                </div>
+                <div>
+                  <div class="text-sm font-medium text-brand-text-100">{{ user.fullName }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-sm text-brand-text-200">{{ user.email }}</div>
+              <div class="text-xs text-brand-text-400">{{ user.mobileNo || 'No phone' }}</div>
+            </td>
+            <td class="px-6 py-4">
+              <span
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-brand-dark-800 text-brand-text-300 border border-brand-dark-700 font-mono">
+                {{ user.userNumber || 'N/A' }}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-right flex items-center justify-end gap-1">
+              <button (click)="openPreferencesModal(user, 'Manager')"
+                class="text-brand-text-400 hover:text-blue-500 transition p-2 rounded-lg hover:bg-brand-dark-800"
+                title="Sidebar & Views Configuration">
+                <span class="material-icons text-sm">manage_accounts</span>
+              </button>
+              <button (click)="openEditModal(user)"
+                class="text-brand-text-400 hover:text-blue-500 transition p-2 rounded-lg hover:bg-brand-dark-800"
+                title="Edit Manager">
+                <span class="material-icons text-sm">edit</span>
+              </button>
+              <button *ngIf="isSuperUser" (click)="deleteUser(user.id, user.fullName)"
+                class="text-brand-text-400 hover:text-red-500 transition p-2 rounded-lg hover:bg-brand-dark-800"
+                title="Delete Manager">
+                <span class="material-icons text-sm">delete</span>
+              </button>
+            </td>
+          </tr>
+        </ng-container>
+
+        <!-- Super Managers -->
+        <ng-container *ngIf="activeTab === 'SuperManager'">
+          <tr *ngFor="let user of filteredSuperManagers" class="hover:bg-brand-dark-800/50 transition group">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-8 h-8 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center font-bold text-sm">
+                  {{ user.fullName[0] || 'S' }}
+                </div>
+                <div>
+                  <div class="text-sm font-medium text-brand-text-100">{{ user.fullName }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-sm text-brand-text-200">{{ user.email }}</div>
+              <div class="text-xs text-brand-text-400">{{ user.mobileNo || 'No phone' }}</div>
+            </td>
+            <td class="px-6 py-4">
+              <span
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-brand-dark-800 text-brand-text-300 border border-brand-dark-700 font-mono">
+                {{ user.userNumber || 'N/A' }}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-right flex items-center justify-end gap-1">
+              <button (click)="openPreferencesModal(user, 'SuperManager')"
+                class="text-brand-text-400 hover:text-red-500 transition p-2 rounded-lg hover:bg-brand-dark-800"
+                title="Sidebar & Views Configuration">
+                <span class="material-icons text-sm">manage_accounts</span>
+              </button>
+              <button (click)="openEditModal(user)"
+                class="text-brand-text-400 hover:text-red-500 transition p-2 rounded-lg hover:bg-brand-dark-800"
+                title="Edit Super Manager">
+                <span class="material-icons text-sm">edit</span>
+              </button>
+              <button *ngIf="isSuperUser" (click)="deleteUser(user.id, user.fullName)"
+                class="text-brand-text-400 hover:text-red-500 transition p-2 rounded-lg hover:bg-brand-dark-800"
+                title="Delete Super Manager">
+                <span class="material-icons text-sm">delete</span>
+              </button>
+            </td>
+          </tr>
+        </ng-container>
+
+        <!-- Empty State -->
+        <tr
+          *ngIf="(activeTab === 'Customer' && filteredCustomers.length === 0) || (activeTab === 'Assignee' && filteredAssignees.length === 0) || (activeTab === 'Manager' && filteredManagers.length === 0) || (activeTab === 'SuperManager' && filteredSuperManagers.length === 0)">
+          <td colspan="4" class="px-6 py-12 text-center text-brand-text-400">
+            <div class="flex flex-col items-center justify-center">
+              <span class="material-icons text-4xl mb-3 opacity-50">people_outline</span>
+              <p>No {{ activeTab | lowercase }}s found matching your search.</p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Slide-out Modal Form -->
+  <div *ngIf="showModal" class="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity"
+    (click)="closeModal()">
+    <div class="w-full max-w-md bg-brand-dark-900 h-full shadow-2xl border-l border-brand-dark-700 flex flex-col"
+      (click)="$event.stopPropagation()">
+
+      <!-- Modal Header -->
+      <div class="px-6 py-5 border-b border-brand-dark-800 flex items-center justify-between bg-brand-dark-950">
+        <h3 class="text-lg font-bold text-brand-text-100">{{ modalMode === 'create' ? 'Add' : 'Edit' }} {{ activeTab }}
+        </h3>
+        <button (click)="closeModal()" class="text-brand-text-400 hover:text-brand-text-100 transition">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
+        <div *ngIf="errorMessage"
+          class="mb-4 bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg flex items-center gap-3">
+          <span class="material-icons">error</span>
+          <span class="text-sm font-medium">{{ errorMessage }}</span>
+        </div>
+        <form [formGroup]="userForm" (ngSubmit)="saveUser()" class="space-y-5">
+
+          <!-- Shared Fields -->
+          <div>
+            <label class="block text-xs font-medium text-brand-text-300 mb-1.5">Full Name *</label>
+            <input type="text" formControlName="fullName"
+              class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-brand-primary focus:outline-none"
+              placeholder="Enter full name">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-brand-text-300 mb-1.5">Email Address *</label>
+            <input type="email" formControlName="email"
+              class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-brand-primary focus:outline-none"
+              placeholder="Enter email address">
+          </div>
+
+          <!-- Role Specific Fields: Customer -->
+          <ng-container *ngIf="activeTab === 'Customer'">
+            <div>
+              <label class="block text-xs font-medium text-brand-text-300 mb-1.5">Contact Person</label>
+              <input type="text" formControlName="contactPerson"
+                class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-brand-primary focus:outline-none"
+                placeholder="Primary contact name">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-brand-text-300 mb-1.5">Phone Number</label>
+                <input type="text" formControlName="phoneNo"
+                  class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-brand-primary focus:outline-none"
+                  placeholder="Office phone">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-brand-text-300 mb-1.5">Mobile Number</label>
+                <input type="text" formControlName="mobileNo"
+                  class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-brand-primary focus:outline-none"
+                  placeholder="Mobile">
+              </div>
+            </div>
+
+            <!-- Mapping: Assignee -->
+            <div class="pt-4 mt-4 border-t border-brand-dark-800 relative">
+              <label class="block text-xs font-medium text-brand-primary mb-1.5">Mapped Executive</label>
+              <div class="relative">
+                <input type="text" [(ngModel)]="executiveSearchQuery" [ngModelOptions]="{standalone: true}"
+                  (focus)="showExecutiveDropdown = true; filterExecutives()" (blur)="onExecutiveBlur()"
+                  (input)="onExecutiveSearchInput()"
+                  class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-brand-primary focus:outline-none cursor-pointer"
+                  placeholder="Search and select an Executive...">
+                <span
+                  class="material-icons absolute right-3 top-1/2 -translate-y-1/2 text-brand-text-400 pointer-events-none text-sm">
+                  {{ showExecutiveDropdown ? 'expand_less' : 'expand_more' }}
+                </span>
+              </div>
+
+              <!-- Dropdown list -->
+              <div *ngIf="showExecutiveDropdown"
+                class="absolute left-0 right-0 mt-1 bg-brand-dark-950 border border-brand-dark-800 rounded-lg shadow-xl max-h-40 overflow-y-auto z-50">
+                <div (mousedown)="selectExecutive({ id: null, fullName: '-- Select an Executive --' })"
+                  class="px-4 py-2 text-sm text-brand-text-400 hover:bg-brand-dark-800 cursor-pointer transition italic">
+                  -- Select an Executive --
+                </div>
+                <div *ngFor="let dev of filteredExecutives" (mousedown)="selectExecutive(dev)"
+                  class="px-4 py-2 text-sm text-brand-text-100 hover:bg-brand-dark-800 cursor-pointer transition">
+                  {{ dev.fullName }} ({{ dev.assigneeNumber }})
+                </div>
+                <div *ngIf="filteredExecutives.length === 0" class="px-4 py-2 text-xs text-brand-text-400 text-center">
+                  No executives found
+                </div>
+              </div>
+            </div>
+
+
+
+            <!-- Mapping: Products -->
+            <div class="pt-4 mt-2">
+              <label class="block text-xs font-medium text-brand-primary mb-1.5">Mapped Products</label>
+
+              <!-- Search Input -->
+              <div class="relative mb-2">
+                <span
+                  class="material-icons text-brand-text-400 text-sm absolute left-3 top-1/2 -translate-y-1/2">search</span>
+                <input type="text" [(ngModel)]="productSearchTerm" [ngModelOptions]="{standalone: true}"
+                  placeholder="Search products..."
+                  class="w-full pl-9 pr-3 py-1.5 bg-brand-dark-950 border border-brand-dark-800 rounded-md text-xs text-brand-text-100 placeholder-brand-text-400 focus:outline-none focus:border-brand-primary transition">
+              </div>
+
+              <div
+                class="w-full bg-brand-dark-950 border border-brand-dark-800 rounded-lg custom-scrollbar overflow-y-auto"
+                style="max-height: 140px; padding: 0.5rem;">
+                <label *ngFor="let prod of filteredProducts"
+                  class="flex items-center gap-3 p-2 hover:bg-brand-dark-800 rounded cursor-pointer transition select-none">
+                  <input type="checkbox" [checked]="isProductSelected(prod.id)" (change)="toggleProduct(prod.id)"
+                    class="w-4 h-4 rounded border-brand-dark-700 text-brand-primary bg-brand-dark-900 focus:ring-brand-primary focus:ring-offset-brand-dark-950 cursor-pointer">
+                  <span class="text-sm text-brand-text-100">{{ prod.name }}</span>
+                </label>
+                <div *ngIf="filteredProducts.length === 0" class="text-xs text-brand-text-400 p-2 text-center">
+                  No products found
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Role Specific Fields: Assignee or PM -->
+          <ng-container *ngIf="activeTab !== 'Customer'">
+            <div>
+              <label class="block text-xs font-medium text-brand-text-300 mb-1.5">Mobile Number</label>
+              <input type="text" formControlName="mobileNo"
+                class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-brand-primary focus:outline-none"
+                placeholder="Mobile number">
+            </div>
+          </ng-container>
+
+          <!-- Password (for all roles except Customer on create) -->
+          <ng-container *ngIf="modalMode === 'create' && activeTab !== 'Customer'">
+            <div>
+              <label class="block text-xs font-medium text-brand-text-300 mb-1.5">Password *</label>
+              <input type="password" formControlName="password"
+                class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-brand-primary focus:outline-none"
+                placeholder="Set initial password">
+            </div>
+          </ng-container>
+
+          <!-- Mapping: Manager (For Assignees only) -->
+          <ng-container *ngIf="activeTab === 'Assignee'">
+            <div class="pt-4 mt-4 border-t border-brand-dark-800">
+              <label class="block text-xs font-medium text-amber-500 mb-1.5">Mapped Project Manager</label>
+              <div class="relative">
+                <select formControlName="managerId"
+                  class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-amber-500 focus:outline-none appearance-none cursor-pointer">
+                  <option [ngValue]="null">-- Select a PM --</option>
+                  <option *ngFor="let pm of managers" [ngValue]="pm.id">{{ pm.fullName }} ({{ pm.userNumber }})</option>
+                </select>
+                <span
+                  class="material-icons absolute right-3 top-1/2 -translate-y-1/2 text-brand-text-400 pointer-events-none text-sm">expand_more</span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Mapping: Super Manager (For Managers only) -->
+          <ng-container *ngIf="activeTab === 'Manager'">
+            <div class="pt-4 mt-4 border-t border-brand-dark-800">
+              <label class="block text-xs font-medium text-blue-500 mb-1.5">Mapped Super Manager</label>
+              <div class="relative">
+                <select formControlName="managerId"
+                  class="w-full px-3 py-2 bg-brand-dark-950 border border-brand-dark-800 rounded-lg text-sm text-brand-text-100 focus:border-blue-500 focus:outline-none appearance-none cursor-pointer">
+                  <option [ngValue]="null">-- Select a Super Manager --</option>
+                  <option *ngFor="let sm of superManagers" [ngValue]="sm.id">{{ sm.fullName }} ({{ sm.userNumber }})
+                  </option>
+                </select>
+                <span
+                  class="material-icons absolute right-3 top-1/2 -translate-y-1/2 text-brand-text-400 pointer-events-none text-sm">expand_more</span>
+              </div>
+            </div>
+          </ng-container>
+
+        </form>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-6 border-t border-brand-dark-800 bg-brand-dark-950 flex justify-end gap-3">
+        <button type="button" (click)="closeModal()"
+          class="px-4 py-2 text-sm font-medium text-brand-text-300 hover:text-brand-text-100 transition">
+          Cancel
+        </button>
+        <button type="button" (click)="saveUser()" [disabled]="userForm.invalid || isSaving"
+          class="px-5 py-2 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition shadow-sm shadow-brand-primary/20 flex items-center gap-2">
+          <span class="material-icons text-sm" *ngIf="isSaving">sync</span>
+          {{ isSaving ? 'Saving...' : 'Save ' + (activeTab === 'Assignee' ? 'Executive' : activeTab) }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Preferences Overlay Modal -->
+  <div *ngIf="showPrefModal" class="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity"
+    (click)="closePrefModal()">
+    <div class="w-full max-w-md bg-brand-dark-900 h-full shadow-2xl border-l border-brand-dark-700 flex flex-col"
+      (click)="$event.stopPropagation()">
+
+      <!-- Header -->
+      <div class="px-6 py-5 border-b border-brand-dark-800 flex items-center justify-between bg-brand-dark-950">
+        <div>
+          <h3 class="text-lg font-bold text-brand-text-100">User Configuration</h3>
+          <p class="text-xs text-brand-text-400 mt-0.5">{{ prefUser?.fullName }} ({{ prefRole }})</p>
+        </div>
+        <button (click)="closePrefModal()" class="text-brand-text-400 hover:text-brand-text-100 transition">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6 overflow-y-auto flex-1 custom-scrollbar space-y-6">
+        <div *ngIf="errorMessage"
+          class="mb-4 bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg flex items-center gap-3">
+          <span class="material-icons">error</span>
+          <span class="text-sm font-medium">{{ errorMessage }}</span>
+        </div>
+
+        <!-- Detail View Preference -->
+        <div class="space-y-3">
+          <label class="block text-sm font-semibold text-brand-text-100">Ticket Detail Page Layout</label>
+          <p class="text-xs text-brand-text-400">Choose which ticket detail screen layout this user sees when clicking a
+            ticket link.</p>
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <label
+              class="flex flex-col p-3 rounded-lg border border-brand-dark-800 hover:border-brand-primary/50 bg-brand-dark-950 cursor-pointer select-none transition">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-semibold text-brand-text-200">Super Manager View</span>
+                <input type="radio" name="detailViewType" value="SuperManager" [(ngModel)]="prefDetailViewType"
+                  class="text-brand-primary focus:ring-brand-primary">
+              </div>
+              <span class="text-[10px] text-brand-text-400">Detailed tabs, PM operations, task assignment</span>
+            </label>
+
+            <label
+              class="flex flex-col p-3 rounded-lg border border-brand-dark-800 hover:border-brand-primary/50 bg-brand-dark-950 cursor-pointer select-none transition">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-semibold text-brand-text-200">Executive View</span>
+                <input type="radio" name="detailViewType" value="Executive" [(ngModel)]="prefDetailViewType"
+                  class="text-brand-primary focus:ring-brand-primary">
+              </div>
+              <span class="text-[10px] text-brand-text-400">Compact timeline view, developer logs</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="h-px bg-brand-dark-800"></div>
+
+        <!-- Sidebar Permissions Options -->
+        <div class="space-y-3">
+          <label class="block text-sm font-semibold text-brand-text-100">Sidebar Menu Permissions</label>
+          <p class="text-xs text-brand-text-400">Explicitly enable or disable specific menu links in this user's
+            sidebar.</p>
+
+          <div class="space-y-4 pt-2">
+            <!-- Group: PM Workspace -->
+            <div>
+              <div class="text-[10px] font-semibold text-brand-text-400 uppercase tracking-widest mb-2 font-mono">PM
+                Workspace</div>
+              <div class="grid grid-cols-1 gap-2 bg-brand-dark-950 p-2.5 rounded-lg border border-brand-dark-850">
+                <label *ngFor="let option of pmOptions"
+                  class="flex items-center justify-between p-1.5 hover:bg-brand-dark-800/40 rounded transition cursor-pointer select-none">
+                  <span class="text-xs text-brand-text-200">{{ option.label }}</span>
+                  <input type="checkbox" [checked]="isPermissionEnabled(option.key)"
+                    (change)="togglePermission(option.key)"
+                    class="rounded text-brand-primary focus:ring-brand-primary bg-brand-dark-900 border-brand-dark-700">
+                </label>
+              </div>
+            </div>
+
+            <!-- Group: Developer Workspace -->
+            <div>
+              <div class="text-[10px] font-semibold text-brand-text-400 uppercase tracking-widest mb-2 font-mono">
+                Developer Workspace</div>
+              <div class="grid grid-cols-1 gap-2 bg-brand-dark-950 p-2.5 rounded-lg border border-brand-dark-850">
+                <label *ngFor="let option of devOptions"
+                  class="flex items-center justify-between p-1.5 hover:bg-brand-dark-800/40 rounded transition cursor-pointer select-none">
+                  <span class="text-xs text-brand-text-200">{{ option.label }}</span>
+                  <input type="checkbox" [checked]="isPermissionEnabled(option.key)"
+                    (change)="togglePermission(option.key)"
+                    class="rounded text-brand-primary focus:ring-brand-primary bg-brand-dark-900 border-brand-dark-700">
+                </label>
+              </div>
+            </div>
+
+            <!-- Group: Master & Settings -->
+            <div>
+              <div class="text-[10px] font-semibold text-brand-text-400 uppercase tracking-widest mb-2 font-mono">
+                Masters & Settings</div>
+              <div class="grid grid-cols-1 gap-2 bg-brand-dark-950 p-2.5 rounded-lg border border-brand-dark-850">
+                <label *ngFor="let option of masterOptions"
+                  class="flex items-center justify-between p-1.5 hover:bg-brand-dark-800/40 rounded transition cursor-pointer select-none">
+                  <span class="text-xs text-brand-text-200">{{ option.label }}</span>
+                  <input type="checkbox" [checked]="isPermissionEnabled(option.key)"
+                    (change)="togglePermission(option.key)"
+                    class="rounded text-brand-primary focus:ring-brand-primary bg-brand-dark-900 border-brand-dark-700">
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="p-6 border-t border-brand-dark-800 bg-brand-dark-950 flex justify-end gap-3">
+        <button type="button" (click)="closePrefModal()"
+          class="px-4 py-2 text-sm font-medium text-brand-text-300 hover:text-brand-text-100 transition">
+          Cancel
+        </button>
+        <button type="button" (click)="savePreferences()" [disabled]="isSavingPrefs"
+          class="px-5 py-2 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition shadow-sm shadow-brand-primary/20 flex items-center gap-2">
+          <span class="material-icons text-sm animate-spin" *ngIf="isSavingPrefs">sync</span>
+          {{ isSavingPrefs ? 'Saving...' : 'Save Configuration' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>

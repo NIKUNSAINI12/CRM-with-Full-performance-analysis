@@ -1,0 +1,105 @@
+/* Custom styles for ticket-create */
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
+}
+
+/* Rich Text Editor Overrides */
+[contenteditable="true"]:empty:before {
+  content: attr(placeholder);
+  pointer-events: none;
+  display: block;
+  color: #6B7280;
+}
+
+[contenteditable="true"] {
+  ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  ol {
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Fix calendar icon in dark mode */
+input[type="date"] {
+  color-scheme: dark;
+}
+
+:host-context(.light) input[type="date"] {
+  color-scheme: light;
+}
+
+/* ── Force dark styling on ALL form controls inside ticket-create ─────────── */
+:host input,
+:host select,
+:host textarea {
+  background-color: var(--bg-workspace, #08090d) !important;
+  color: var(--text-high, #f1f5f9) !important;
+  border-color: var(--border-workspace, #1e2330) !important;
+
+  &::placeholder {
+    color: var(--text-muted, #64748b) !important;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-brand-primary, #8b5cf6) !important;
+  }
+
+  option {
+    background-color: var(--bg-surface, #111318) !important;
+    color: var(--text-high, #f1f5f9) !important;
+  }
+}
+
+/* Docket autocomplete dropdown */
+:host .docket-dropdown-list {
+  background: var(--bg-surface, #111318) !important;
+  border-color: var(--border-workspace, #1e2330) !important;
+  color: var(--text-high, #f1f5f9) !important;
+}
+
+/* ── Tailwind class fallbacks (in case Tailwind v4 doesn't compile custom bg-* classes) ── */
+:host .bg-brand-dark-950 { background-color: var(--bg-workspace, #08090d) !important; }
+:host .bg-brand-dark-900 { background-color: var(--bg-surface, #111318) !important; }
+:host .bg-brand-dark-800 { background-color: var(--border-workspace, #1e2330) !important; }
+:host .border-brand-dark-800 { border-color: var(--border-workspace, #1e2330) !important; }
+:host .border-brand-dark-700 { border-color: var(--border-hover, #2d3147) !important; }
+:host .text-brand-text-100 { color: var(--text-high, #f1f5f9) !important; }
+:host .text-brand-text-200 { color: var(--text-regular, #cbd5e1) !important; }
+:host .text-brand-text-300 { color: var(--text-regular, #94a3b8) !important; }
+:host .text-brand-text-400 { color: var(--text-muted, #64748b) !important; }
+:host .text-brand-primary  { color: var(--color-brand-primary, #8b5cf6) !important; }
+:host .hover\:bg-brand-secondary:hover { background-color: var(--color-brand-secondary, #7c3aed) !important; }
+
+

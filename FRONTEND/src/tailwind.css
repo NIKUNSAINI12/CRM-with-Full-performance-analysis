@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@source "./app/**/*.{html,ts}";
+@source "./src/app/**/*.{html,ts}";
+@source "../src/app/**/*.{html,ts}";
+@source "./index.html";
+@source "./src/index.html";
+@source "../src/index.html";
+
+@theme inline {
+  --color-brand-primary: var(--color-brand-primary);
+  --color-brand-secondary: var(--color-brand-secondary);
+  --color-brand-dark-950: var(--bg-workspace);
+  --color-brand-dark-900: var(--bg-surface);
+  --color-brand-dark-800: var(--border-workspace);
+  --color-brand-dark-700: var(--border-hover);
+  --color-brand-text-100: var(--text-high);
+  --color-brand-text-300: var(--text-regular);
+  --color-brand-text-400: var(--text-muted);
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+}
